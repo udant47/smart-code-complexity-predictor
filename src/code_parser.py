@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import ast
 import io
+import sys
 import tokenize
 import warnings
 from dataclasses import asdict, dataclass, field
@@ -514,7 +515,7 @@ def _syntax_error(exc: SyntaxError, lines: list[str]) -> ParseError:
 
 def _hint_for(msg: str, kind: str) -> Optional[str]:
     m = msg.lower()
-    if "print" in m and "parentheses" in m:
+    if ("print" in m and "parentheses" in m) or "multiple exception types" in m:
         return "This looks like Python 2 code. Only Python 3 is supported."
     if "tab" in m:
         return "Mixing tabs and spaces is not allowed. Use 4 spaces per level."
@@ -528,6 +529,12 @@ def _hint_for(msg: str, kind: str) -> Optional[str]:
         return "Statements like def, if, for, while and class end with a colon."
     if "too many nested" in m or "too many levels" in m:
         return "The code is nested too deeply to analyse."
+    if kind == ERR_SYNTAX:
+        return (
+            "If this code runs on a newer Python, it may use syntax that this "
+            f"app's Python {sys.version_info.major}.{sys.version_info.minor} "
+            "does not support yet."
+        )
     return None
 
 

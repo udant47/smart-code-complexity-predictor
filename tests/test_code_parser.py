@@ -242,6 +242,20 @@ def test_python2_print_hint():
     assert "Python 2" in (result.error.hint or "")
 
 
+def test_python2_except_hint():
+    result = parse_source("try:\n    pass\nexcept ValueError, e:\n    pass\n")
+    assert result.error.kind == ERR_SYNTAX
+    assert "Python 2" in (result.error.hint or "")
+
+
+def test_generic_syntax_error_mentions_python_version():
+    import sys
+
+    result = parse_source("x = = 1\n")
+    assert result.error.kind == ERR_SYNTAX
+    assert f"{sys.version_info.major}.{sys.version_info.minor}" in (result.error.hint or "")
+
+
 def test_null_bytes_rejected():
     result = parse_source("x = 1\x00\n")
     assert not result.success
