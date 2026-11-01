@@ -284,3 +284,16 @@ def test_real_model_predictions(src):
     assert r.model.available and r.model.n_features == len(r.model and pp.feature_columns(r.model.feature_set))
     assert sum(r.prediction.probabilities.values()) == pytest.approx(1, abs=1e-3)
     assert r.prediction.measured_accuracy_in_range is not None
+
+
+def test_derived_complexity_score_is_included_and_separate(model_dir):
+    r = pr.predict(MERGE_SORT, **paths(model_dir))
+    assert r.derived_score["label"] == "Derived Complexity Score" and r.derived_score["scope"] == "functions"
+    assert all(f.derived_score["score"] is not None for f in r.functions)
+    assert "separate from the ML" in r.derived_score["disclaimer"]
+    script = pr.predict(SCRIPT, **paths(model_dir)).derived_score
+    assert script["scope"] == "module" and script["module"]["not_applicable"] == ["parameter_count"]
+    missing = pr.predict(MERGE_SORT, model_path=model_dir / "nope.joblib",
+                         metadata_path=model_dir / "model_metadata.json",
+                         preprocessing_path=model_dir / "preprocessing_pipeline.joblib")
+    assert missing.prediction is None and missing.derived_score["highest"] is not None  # works without the model

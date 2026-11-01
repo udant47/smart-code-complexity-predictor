@@ -32,6 +32,9 @@ What the result contains
 * **Per-function ML predictions (experimental):** the same model applied to
   each function's code on its own. It was never trained on single functions,
   so these are flagged ``experimental`` and carry a warning.
+* **Derived Complexity Score (0-100):** a documented structural indicator per
+  function, with a file summary (or a module score for scripts); see
+  ``src/complexity_score.py``. It is separate from the ML prediction.
 * **Model metadata, errors and warnings.** If the model files are missing or
   incompatible, the ML parts are ``None`` and an error explains why. No
   prediction is ever invented.
@@ -68,6 +71,7 @@ import pandas as pd
 from src import config
 from src import preprocessing as pp
 from src.algorithm_analyzer import analyze_algorithms
+from src import complexity_score as dcs
 from src.code_parser import ParseResult, parse_bytes, parse_source
 from src.dataset_loader import BIGO_LABELS, STRUCTURAL_BANDS, structural_band
 from src.feature_extractor import FILE_FEATURE_NAMES, extract_features
@@ -115,6 +119,7 @@ class FunctionReport:
     metrics: dict
     structural_category: str
     static_estimate: dict
+    derived_score: Optional[dict] = None  # Derived Complexity Score (0-100), see src/complexity_score.py
     ml_prediction: Optional[MLPrediction] = None
 
 
@@ -145,6 +150,7 @@ class PredictionResult:
     prediction: Optional[MLPrediction] = None
     functions: list = field(default_factory=list)
     model: Optional[ModelInfo] = None
+    derived_score: Optional[dict] = None  # file summary of the Derived Complexity Score
 
     def to_dict(self) -> dict:
         return json.loads(json.dumps(asdict(self), default=_json_default))
@@ -158,6 +164,7 @@ class PredictionResult:
                 "Function": f.function_id, "Type": f.kind, "Lines": f"{f.start_line}-{f.end_line}",
                 "Cyclomatic complexity": f.metrics.get("cyclomatic_complexity"),
                 "Structural category": f.structural_category,
+                "Derived Complexity Score": (f.derived_score or {}).get("score"),
                 "Static time estimate": f.static_estimate.get("time_complexity"),
                 "Static space estimate": f.static_estimate.get("space_complexity"),
                 "ML time class (experimental)": ml.big_o if ml else None,
@@ -339,15 +346,27 @@ def predict(source, *, model_path: Path = config.MODEL_PATH, metadata_path: Path
     # 4. Functions: structural metrics, rule-based category, static Big-O estimate
     functions = analyze_functions(parsed)
     estimates = {e.function_id: e for e in analyze_algorithms(parsed).estimates}
+    feature_rows = {row["lineno"]: row for row in feats.function_features}
     result.file_summary = functions.summary.to_dict() if functions.summary else None
+    scored = []
     for rec in functions.functions:
         est = estimates.get(rec.function_id)
+        row = feature_rows.get(rec.start_line, {})
+        score = dcs.score_function(row)
+        scored.append((rec.function_id, score, int(row.get("code_lines", 1))))
         result.functions.append(FunctionReport(
             function_id=rec.function_id, name=rec.function_name, kind=rec.kind, class_name=rec.class_name,
             start_line=rec.start_line, end_line=rec.end_line, metrics=rec.to_dict(),
             structural_category=structural_band(rec.cyclomatic_complexity),
             static_estimate=est.to_dict() if est else {},
+            derived_score=score.to_dict(),
         ))
+    if scored:
+        result.derived_score = {"scope": "functions", **dcs.summarize(scored)}
+    else:  # a script with no functions: score the module as one unit
+        module = dcs.score_module(feats.file_features)
+        result.derived_score = {"scope": "module", "label": dcs.LABEL, "module": module.to_dict(),
+                                "highest": module.score, "highest_band": module.band, "disclaimer": dcs.DISCLAIMER}
     bands = [f.structural_category for f in result.functions]
     worst = max(result.functions, key=lambda f: f.metrics["cyclomatic_complexity"], default=None)
     result.structural_category = {
