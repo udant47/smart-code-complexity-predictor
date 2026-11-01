@@ -85,6 +85,7 @@ import pandas as pd
 from src import config
 from src.code_parser import parse_source
 from src.feature_extractor import FILE_FEATURE_NAMES, FUNCTION_FEATURE_NAMES, extract_features
+from src.pattern_features import PATTERN_FEATURE_NAMES, extract_pattern_features
 from src.function_analyzer import analyze_functions
 
 # --------------------------------------------------------------------------- #
@@ -399,6 +400,7 @@ def near_duplicate_clusters(rows: list[dict], group_key: str, threshold: float =
 # --------------------------------------------------------------------------- #
 # Big-O dataset (CodeComplex)
 # --------------------------------------------------------------------------- #
+BIGO_FEATURE_COLUMNS = tuple(FILE_FEATURE_NAMES) + tuple(PATTERN_FEATURE_NAMES)
 BIGO_META_COLUMNS = (
     "sample_id", "source_dataset", "source_commit", "raw_index", "problem", "tags",
     "label", "label_name", "label_bigo", "label_rank", "label_method",
@@ -438,7 +440,7 @@ def build_bigo_dataset(records: list[dict]) -> tuple[pd.DataFrame, dict]:
             "_renamed": token_hash(renamed),
             "_shingles": shingles(renamed),
             "code_sha256": sha256_bytes(src.encode("utf-8")),
-            "features": report.file_features,
+            "features": {**report.file_features, **extract_pattern_features(report.parse_result.tree)},
         })
 
     valid = len(rows)
@@ -463,10 +465,10 @@ def build_bigo_dataset(records: list[dict]) -> tuple[pd.DataFrame, dict]:
             "label_method": "expert annotation (CodeComplex authors), whole program, worst-case time",
             "near_duplicate_cluster": clusters.get(r["raw_index"], -1),
             "code_sha256": r["code_sha256"],
-            **{k: r["features"][k] for k in FILE_FEATURE_NAMES},
+            **{k: r["features"][k] for k in BIGO_FEATURE_COLUMNS},
         })
-    df = pd.DataFrame(table, columns=list(BIGO_META_COLUMNS) + list(FILE_FEATURE_NAMES))
-    _check_no_missing(df, FILE_FEATURE_NAMES)
+    df = pd.DataFrame(table, columns=list(BIGO_META_COLUMNS) + list(BIGO_FEATURE_COLUMNS))
+    _check_no_missing(df, BIGO_FEATURE_COLUMNS)
 
     in_clusters = int((df["near_duplicate_cluster"] >= 0).sum())
     stats = {

@@ -84,6 +84,7 @@ from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from src import config
 from src.dataset_loader import BIGO_LABELS
 from src.feature_extractor import FILE_FEATURE_NAMES
+from src.pattern_features import PATTERN_FEATURE_NAMES
 
 TARGET = "label"
 CLASS_ORDER = [k for k, _ in sorted(BIGO_LABELS.items(), key=lambda kv: kv[1][2])]
@@ -113,9 +114,14 @@ SIZE_FEATURES = (
 )
 
 FEATURE_SETS: dict[str, tuple[str, ...]] = {
+    # structural features only (the first Phase 10 round)
     "all": tuple(FILE_FEATURE_NAMES),
     "no_size": tuple(f for f in FILE_FEATURE_NAMES if f not in SIZE_FEATURES),
+    # structural + algorithm-pattern features (src/pattern_features.py)
+    "patterns": tuple(FILE_FEATURE_NAMES) + tuple(PATTERN_FEATURE_NAMES),
+    "patterns_no_size": tuple(f for f in FILE_FEATURE_NAMES if f not in SIZE_FEATURES) + tuple(PATTERN_FEATURE_NAMES),
 }
+NO_SIZE_VARIANT = {"all": "no_size", "patterns": "patterns_no_size"}
 
 SPLIT_FILE = config.PROCESSED_DATA_DIR / "bigo_splits.csv"
 PREPROCESSING_CONFIG = config.MODELS_DIR / "preprocessing_config.json"

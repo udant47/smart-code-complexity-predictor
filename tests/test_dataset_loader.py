@@ -240,7 +240,7 @@ def test_bigo_removal_reasons(codecomplex_file):
 
 def test_bigo_columns_labels_and_origin(codecomplex_file):
     df, stats = dl.build_bigo_dataset(dl.load_codecomplex(codecomplex_file))
-    assert list(df.columns) == list(dl.BIGO_META_COLUMNS) + list(FILE_FEATURE_NAMES)
+    assert list(df.columns) == list(dl.BIGO_META_COLUMNS) + list(dl.BIGO_FEATURE_COLUMNS)
     row = df.set_index("raw_index").loc[0]
     assert row["sample_id"] == "codecomplex-py-00000"
     assert (row["label"], row["label_name"], row["label_bigo"], row["label_rank"]) == ("linear", "linear", "O(n)", 2)
@@ -248,7 +248,7 @@ def test_bigo_columns_labels_and_origin(codecomplex_file):
     assert row["tags"] == "math"
     assert df.set_index("raw_index").loc[14, "tags"] == ""  # missing tags -> ""
     assert "expert annotation" in row["label_method"]
-    assert df[list(FILE_FEATURE_NAMES)].notna().all().all()
+    assert df[list(dl.BIGO_FEATURE_COLUMNS)].notna().all().all()
 
 
 def test_bigo_near_duplicates_flagged_not_removed(codecomplex_file):
