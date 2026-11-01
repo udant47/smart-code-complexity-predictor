@@ -35,6 +35,8 @@ What the result contains
 * **Derived Complexity Score (0-100):** a documented structural indicator per
   function, with a file summary (or a module score for scripts); see
   ``src/complexity_score.py``. It is separate from the ML prediction.
+* **Refactoring recommendations:** deterministic, evidence-based review
+  guidance from ``src/suggestions.py`` (not guaranteed fixes, not ML).
 * **Optional explanation** (``explain=True``): which features moved the model's vote
   for this file, from ``src/explainability.py``. It explains the model, not the code.
 * **Model metadata, errors and warnings.** If the model files are missing or
@@ -79,6 +81,7 @@ from src.dataset_loader import BIGO_LABELS, STRUCTURAL_BANDS, structural_band
 from src.feature_extractor import FILE_FEATURE_NAMES, extract_features
 from src.function_analyzer import analyze_functions
 from src.pattern_features import PATTERN_FEATURE_NAMES, extract_pattern_features
+from src.suggestions import suggest
 
 PREPROCESSING_PATH = config.MODELS_DIR / "preprocessing_pipeline.joblib"
 LOW_CONFIDENCE = 0.4  # below this top probability, a warning is attached
@@ -153,6 +156,7 @@ class PredictionResult:
     functions: list = field(default_factory=list)
     model: Optional[ModelInfo] = None
     derived_score: Optional[dict] = None  # file summary of the Derived Complexity Score
+    recommendations: Optional[dict] = None  # refactoring review guidance, see src/suggestions.py
     explanation: Optional[dict] = None  # per-prediction explanation (predict(..., explain=True)); see src/explainability.py
 
     def to_dict(self) -> dict:
@@ -385,6 +389,7 @@ def predict(source, *, model_path: Path = config.MODEL_PATH, metadata_path: Path
         "counts": {b[0]: bands.count(b[0]) for b in STRUCTURAL_BANDS},
         "module_level": structural_band(feats.file_features["cyclomatic_complexity"]),
     }
+    result.recommendations = suggest(parsed).to_dict()  # rule-based, independent of the ML model
     if not result.functions:
         result.warnings.append(Issue("no_functions", "No functions found: function-level results are empty; "
                                      "file-level metrics and the file prediction still apply."))
