@@ -1,0 +1,147 @@
+{
+  "chosen": {
+    "feature_set": "patterns",
+    "params": {
+      "class_weight": "balanced_subsample",
+      "max_features": "sqrt",
+      "min_samples_leaf": 3,
+      "n_estimators": 300
+    }
+  },
+  "test_metrics": {
+    "accuracy": 0.4533,
+    "balanced_accuracy": 0.4424,
+    "macro_precision": 0.4797,
+    "macro_recall": 0.4424,
+    "macro_f1": 0.4422,
+    "weighted_f1": 0.4515,
+    "macro_f1_ci": [
+      0.3202,
+      0.5435
+    ]
+  },
+  "before_test": {
+    "n": 814,
+    "accuracy": 0.4533,
+    "macro_f1": 0.4422,
+    "weighted_f1": 0.4515
+  },
+  "tuned_test": {
+    "n": 814,
+    "accuracy": 0.4656,
+    "macro_f1": 0.4615,
+    "weighted_f1": 0.468
+  },
+  "generalization": {
+    "problem_grouped_oof": {
+      "n": 4458,
+      "accuracy": 0.5608,
+      "macro_f1": 0.5592,
+      "weighted_f1": 0.5625
+    },
+    "contest_grouped_oof": {
+      "n": 4458,
+      "accuracy": 0.5541,
+      "macro_f1": 0.5548,
+      "weighted_f1": 0.5572
+    },
+    "family_holdout_mean_macro_f1_change": -0.0318,
+    "families": {
+      "binary search": {
+        "held_out": 0.4787,
+        "seen": 0.5391
+      },
+      "bitmasks": {
+        "held_out": 0.106,
+        "seen": 0.1723
+      },
+      "brute force": {
+        "held_out": 0.4021,
+        "seen": 0.4171
+      },
+      "combinatorics": {
+        "held_out": 0.1873,
+        "seen": 0.1908
+      },
+      "constructive algorithms": {
+        "held_out": 0.3313,
+        "seen": 0.3428
+      },
+      "dp": {
+        "held_out": 0.3827,
+        "seen": 0.4965
+      },
+      "graphs": {
+        "held_out": 0.4894,
+        "seen": 0.4983
+      },
+      "greedy": {
+        "held_out": 0.4712,
+        "seen": 0.46
+      },
+      "implementation": {
+        "held_out": 0.4097,
+        "seen": 0.4328
+      },
+      "math": {
+        "held_out": 0.4227,
+        "seen": 0.4617
+      },
+      "number theory": {
+        "held_out": 0.2863,
+        "seen": 0.3083
+      },
+      "sortings": {
+        "held_out": 0.3501,
+        "seen": 0.3794
+      }
+    },
+    "implementations_mean_problem_accuracy": 0.5001,
+    "external": {
+      "file": "time_complexity_test_set.jsonl",
+      "records": 640,
+      "unmapped_label": 86,
+      "unparsable": 0,
+      "overlapping_problem": 33,
+      "labels_unmapped": {
+        "O(n*m)": 48,
+        "O(n+m)": 23,
+        "O(n+mlogm)": 5,
+        "O(n+m)log(n+m)": 2,
+        "O(n**2+m**2)": 3,
+        "O(nlogn+mlogm)": 5
+      },
+      "unseen_problems": {
+        "n": 521,
+        "accuracy": 0.7716,
+        "macro_f1": 0.4578,
+        "weighted_f1": 0.7754,
+        "class_counts": {
+          "O(n)": 237,
+          "O(n log n)": 115,
+          "O(n^2)": 112,
+          "O(1)": 52,
+          "O(log n)": 5
+        }
+      },
+      "all_mapped": {
+        "n": 554,
+        "accuracy": 0.7762,
+        "macro_f1": 0.4602,
+        "weighted_f1": 0.7818,
+        "class_counts": {
+          "O(n)": 251,
+          "O(n log n)": 127,
+          "O(n^2)": 118,
+          "O(1)": 53,
+          "O(log n)": 5
+        }
+      }
+    }
+  },
+  "failure_distance_%": {
+    "correct": 45.3,
+    "adjacent class": 20.4,
+    "2+ classes away": 34.3
+  }
+}
