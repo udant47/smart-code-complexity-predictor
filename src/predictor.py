@@ -35,6 +35,8 @@ What the result contains
 * **Derived Complexity Score (0-100):** a documented structural indicator per
   function, with a file summary (or a module score for scripts); see
   ``src/complexity_score.py``. It is separate from the ML prediction.
+* **Optional explanation** (``explain=True``): which features moved the model's vote
+  for this file, from ``src/explainability.py``. It explains the model, not the code.
 * **Model metadata, errors and warnings.** If the model files are missing or
   incompatible, the ML parts are ``None`` and an error explains why. No
   prediction is ever invented.
@@ -151,6 +153,7 @@ class PredictionResult:
     functions: list = field(default_factory=list)
     model: Optional[ModelInfo] = None
     derived_score: Optional[dict] = None  # file summary of the Derived Complexity Score
+    explanation: Optional[dict] = None  # per-prediction explanation (predict(..., explain=True)); see src/explainability.py
 
     def to_dict(self) -> dict:
         return json.loads(json.dumps(asdict(self), default=_json_default))
@@ -321,8 +324,13 @@ def _all_features(parsed: ParseResult) -> dict:
 
 
 def predict(source, *, model_path: Path = config.MODEL_PATH, metadata_path: Path = config.MODEL_METADATA_PATH,
-            preprocessing_path: Path = PREPROCESSING_PATH, per_function_ml: bool = True) -> PredictionResult:
-    """Analyse source code (str, or bytes from an upload) and predict its complexity."""
+            preprocessing_path: Path = PREPROCESSING_PATH, per_function_ml: bool = True,
+            explain: bool = False) -> PredictionResult:
+    """Analyse source code (str, or bytes from an upload) and predict its complexity.
+
+    explain=True also attaches a per-prediction explanation of the file-level ML
+    prediction (tree-path contributions, see src/explainability.py).
+    """
     # 1-2. Validate and parse (never executes the code)
     if isinstance(source, (bytes, bytearray)):
         parsed = parse_bytes(bytes(source))
@@ -400,6 +408,10 @@ def predict(source, *, model_path: Path = config.MODEL_PATH, metadata_path: Path
             "low_confidence",
             f"The model is unsure (top probability {result.prediction.probability:.2f}, next "
             f"{result.prediction.runner_up}); treat the prediction as a weak hint."))
+    if explain:
+        from src.explainability import explain_features
+
+        result.explanation = explain_features(file_values, model=model).to_dict()
 
     # 8. Per-function ML (experimental: the model was trained on whole programs)
     if per_function_ml:
