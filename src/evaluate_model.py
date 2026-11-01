@@ -135,7 +135,27 @@ def test_evaluation(df, split, fitted) -> dict:
     per_class = pd.DataFrame({"precision": p, "recall": r, "f1": f, "support": s},
                              index=[BIGO_OF[c] for c in pp.CLASS_ORDER]).round(3)
     return {"pred": pred, "proba": proba, "metrics": {**m, "macro_f1_ci": [round(lo, 4), round(hi, 4)]},
-            "per_class": per_class, "cm": confusion_matrix(y, pred, labels=pp.CLASS_ORDER)}
+            "per_class": per_class, "cm": confusion_matrix(y, pred, labels=pp.CLASS_ORDER),
+            "reliability": confidence_reliability(y.values, pred, proba)}
+
+
+CONFIDENCE_BINS = (0.0, 0.4, 0.6, 0.8, 1.0001)
+
+
+def confidence_reliability(y_true, y_pred, proba) -> list[dict]:
+    """How often test predictions were right, by the model's top probability.
+
+    Random Forest probabilities are averaged tree votes, not calibrated
+    probabilities; this table records what they meant on the held-out test set.
+    """
+    top = np.asarray(proba).max(axis=1)
+    correct = np.asarray(y_true) == np.asarray(y_pred)
+    rows = []
+    for lo, hi in zip(CONFIDENCE_BINS[:-1], CONFIDENCE_BINS[1:]):
+        mask = (top >= lo) & (top < hi)
+        rows.append({"from": lo, "to": min(hi, 1.0), "n": int(mask.sum()),
+                     "accuracy": round(float(correct[mask].mean()), 4) if mask.any() else None})
+    return rows
 
 
 # --------------------------------------------------------------------------- #
@@ -689,7 +709,8 @@ def run(df: Optional[pd.DataFrame] = None, split: Optional[pp.SplitResult] = Non
             print(f"[{time.time() - t0:5.0f}s] {msg}", flush=True)
 
     # Final model (fitted on train + validation) and the single test evaluation
-    final = build(chosen, seed).fit(df.loc[dev], y.loc[dev])
+    features = pp.feature_columns(chosen["feature_set"])
+    final = build(chosen, seed).fit(df.loc[dev, features], y.loc[dev])  # fitted on the feature columns only
     test = test_evaluation(df, split, final)
     log(f"test macro F1 {test['metrics']['macro_f1']:.3f}, accuracy {test['metrics']['accuracy']:.3f}")
 
@@ -745,6 +766,7 @@ def run(df: Optional[pd.DataFrame] = None, split: Optional[pp.SplitResult] = Non
             "trained_on": f"{len(dev)} train + validation rows (grouped by problem)",
             "test_metrics": test["metrics"],
             "per_class_test": test["per_class"].to_dict(orient="index"),
+            "confidence_reliability_test": test["reliability"],
             "generalization": _summary(result)["generalization"],
             "tuning": {k: tuning[k] for k in ("adopted", "rcv_gain", "adopt_margin")},
             "seed": seed,

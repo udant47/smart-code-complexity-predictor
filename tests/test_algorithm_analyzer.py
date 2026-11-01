@@ -725,3 +725,14 @@ def test_collapse_to_single_variable():
     n, m = Mono.sym("a"), Mono.sym("b")
     assert Cost.of(n * m).collapse().render({"n": "n"}) == "O(n^2)"
     assert Cost.of(n, m).collapse().render({"n": "n"}) == "O(n)"
+
+
+def test_merge_sort_with_inline_recursive_calls():
+    # merge(merge_sort(left half), merge_sort(right half)) without temporary variables
+    src = MERGE_SORT.replace(
+        "    left = merge_sort(items[:mid])\n        right = merge_sort(items[mid:])\n        return merge(left, right)",
+        "    return merge(merge_sort(items[:mid]), merge_sort(items[mid:]))",
+    )
+    assert "merge(merge_sort(" in src
+    e = estimate(src, "merge_sort")
+    assert_estimate(e, "O(n log n)", "O(n)")

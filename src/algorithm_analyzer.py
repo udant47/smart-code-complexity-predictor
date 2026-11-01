@@ -500,6 +500,12 @@ class _FunctionAnalyzer:
         if isinstance(e, ast.Dict):
             return None if any(k is None for k in e.keys) else Mono.const()
         if isinstance(e, ast.Call):
+            if self._is_recursive_call(e):
+                arg = self._first_shrinking_arg(e)
+                size = self.coll_size(arg) if arg is not None else None
+                if size is not None:
+                    self._assume("A recursive call is assumed to return a collection the same size as its input (as in sorting).", "medium")
+                return size
             fn = _call_name(e)
             if fn == "range":
                 bound, _ = self._range_bound(e)
