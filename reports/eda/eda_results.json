@@ -1,0 +1,258 @@
+{
+  "bigo_overview": {
+    "rows": 4458,
+    "columns": 52,
+    "feature_columns": 39,
+    "metadata_columns": 13,
+    "feature_dtypes": {
+      "int64": 35,
+      "float64": 4
+    },
+    "missing_values": 0,
+    "empty_metadata_strings": {},
+    "constant_features": [],
+    "mostly_zero_features": [
+      "docstring_lines",
+      "try_count",
+      "except_count"
+    ]
+  },
+  "structural_overview": {
+    "rows": 3910,
+    "columns": 48,
+    "feature_columns": 36,
+    "metadata_columns": 12,
+    "feature_dtypes": {
+      "int64": 34,
+      "float64": 2
+    },
+    "missing_values": 0,
+    "empty_metadata_strings": {},
+    "constant_features": [],
+    "mostly_zero_features": [
+      "function_count",
+      "class_count",
+      "elif_count",
+      "try_count",
+      "except_count",
+      "import_count",
+      "bitwise_operator_count"
+    ]
+  },
+  "bigo_duplicates": {
+    "duplicate_sample_ids": 0,
+    "duplicate_code_hashes": 0,
+    "rows_sharing_a_feature_vector": 95,
+    "feature_vectors_with_conflicting_labels": 0,
+    "rows_in_conflicting_vectors": 0,
+    "accuracy_ceiling_from_features": 1.0
+  },
+  "structural_duplicates": {
+    "duplicate_sample_ids": 0,
+    "duplicate_code_hashes": 0,
+    "rows_sharing_a_feature_vector": 221,
+    "feature_vectors_with_conflicting_labels": 0,
+    "rows_in_conflicting_vectors": 0,
+    "accuracy_ceiling_from_features": 1.0
+  },
+  "problem_purity": {
+    "problems": 275,
+    "single_label_problems": 236,
+    "single_label_problem_%": 85.8,
+    "labels_per_problem": {
+      "1": 236,
+      "2": 26,
+      "3": 12,
+      "4": 1
+    },
+    "samples_with_problem_majority_label_%": 95.6,
+    "samples_per_problem": {
+      "count": 275.0,
+      "mean": 16.2,
+      "std": 18.5,
+      "min": 1.0,
+      "25%": 8.0,
+      "50%": 11.0,
+      "75%": 18.0,
+      "max": 135.0
+    }
+  },
+  "near_duplicates": {
+    "samples_in_clusters": 223,
+    "clusters": 104,
+    "largest_cluster": 5,
+    "clusters_with_mixed_labels": 0,
+    "clusters_spanning_problems": 0
+  },
+  "structural_circularity": {
+    "rule_reproduces_label_%": 100.0,
+    "cc_range_per_band": {
+      "Low": {
+        "min": 1,
+        "max": 5,
+        "count": 3245
+      },
+      "Medium": {
+        "min": 6,
+        "max": 10,
+        "count": 549
+      },
+      "High": {
+        "min": 11,
+        "max": 31,
+        "count": 116
+      }
+    },
+    "features_with_rho_over_0.7": {
+      "maximum_nesting_depth": 0.829,
+      "average_nesting_depth": 0.82,
+      "if_count": 0.801,
+      "comparison_operator_count": 0.704
+    }
+  },
+  "bigo_class_distribution": {
+    "O(1)": {
+      "count": 683,
+      "percent": 15.32
+    },
+    "O(log n)": {
+      "count": 581,
+      "percent": 13.03
+    },
+    "O(n)": {
+      "count": 801,
+      "percent": 17.97
+    },
+    "O(n log n)": {
+      "count": 757,
+      "percent": 16.98
+    },
+    "O(n^2)": {
+      "count": 615,
+      "percent": 13.8
+    },
+    "O(n^3)": {
+      "count": 540,
+      "percent": 12.11
+    },
+    "O(2^n)": {
+      "count": 481,
+      "percent": 10.79
+    }
+  },
+  "structural_band_distribution": {
+    "Low": {
+      "count": 3245,
+      "percent": 82.99
+    },
+    "Medium": {
+      "count": 549,
+      "percent": 14.04
+    },
+    "High": {
+      "count": 116,
+      "percent": 2.97
+    }
+  },
+  "top_label_associations": {
+    "maximum_loop_nesting_depth": 0.602,
+    "for_loop_count": 0.59,
+    "nested_loop_count": 0.567,
+    "loop_count": 0.555,
+    "maximum_nesting_depth": 0.523,
+    "identifier_count": 0.514,
+    "function_call_count": 0.512,
+    "unique_identifier_count": 0.506,
+    "cyclomatic_complexity": 0.506,
+    "code_lines": 0.402
+  },
+  "redundant_pairs": [
+    {
+      "feature_a": "try_count",
+      "feature_b": "except_count",
+      "spearman": 1.0
+    },
+    {
+      "feature_a": "average_function_length",
+      "feature_b": "average_function_cyclomatic_complexity",
+      "spearman": 0.99
+    },
+    {
+      "feature_a": "maximum_function_length",
+      "feature_b": "maximum_function_cyclomatic_complexity",
+      "spearman": 0.989
+    },
+    {
+      "feature_a": "average_function_cyclomatic_complexity",
+      "feature_b": "maximum_function_cyclomatic_complexity",
+      "spearman": 0.984
+    },
+    {
+      "feature_a": "average_function_length",
+      "feature_b": "maximum_function_length",
+      "spearman": 0.984
+    },
+    {
+      "feature_a": "comment_lines",
+      "feature_b": "comment_ratio",
+      "spearman": 0.981
+    },
+    {
+      "feature_a": "average_function_length",
+      "feature_b": "maximum_function_cyclomatic_complexity",
+      "spearman": 0.976
+    },
+    {
+      "feature_a": "maximum_function_length",
+      "feature_b": "average_function_cyclomatic_complexity",
+      "spearman": 0.974
+    },
+    {
+      "feature_a": "total_lines",
+      "feature_b": "code_lines",
+      "spearman": 0.973
+    }
+  ],
+  "top_outlier_features": {
+    "elif_count": 635,
+    "bitwise_operator_count": 605,
+    "conditional_expression_count": 515,
+    "function_count": 482,
+    "import_count": 473,
+    "comment_lines": 429,
+    "class_count": 325,
+    "recursive_call_count": 314
+  },
+  "template_prevalence": {
+    "reads sys.stdin": {
+      "O(1)": 10.5,
+      "O(log n)": 11.2,
+      "O(n)": 16.2,
+      "O(n log n)": 19.6,
+      "O(n^2)": 23.3,
+      "O(n^3)": 35.7,
+      "O(2^n)": 31.2,
+      "all": 20.2
+    },
+    "FastIO class": {
+      "O(1)": 2.3,
+      "O(log n)": 2.6,
+      "O(n)": 3.6,
+      "O(n log n)": 4.0,
+      "O(n^2)": 3.9,
+      "O(n^3)": 12.0,
+      "O(2^n)": 8.5,
+      "all": 4.9
+    },
+    "raises recursion limit": {
+      "O(1)": 3.4,
+      "O(log n)": 3.6,
+      "O(n)": 3.7,
+      "O(n log n)": 3.6,
+      "O(n^2)": 3.9,
+      "O(n^3)": 8.7,
+      "O(2^n)": 6.9,
+      "all": 4.6
+    }
+  }
+}
