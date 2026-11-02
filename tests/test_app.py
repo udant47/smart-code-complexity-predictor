@@ -67,7 +67,7 @@ def test_only_python_is_supported():
 
 
 def test_overview_and_function_frame_come_from_results():
-    r = predict(SAMPLES["Merge sort (divide and conquer)"]).to_dict()
+    r = predict(SAMPLES["6. Merge sort"]).to_dict()
     o = logic.overview(r)
     assert o["function_count"] == 2 and o["structural_category"] == "Low"
     assert o["derived_score"] == r["derived_score"]["highest"]
@@ -86,8 +86,11 @@ def test_compare_uses_real_differences():
     assert shown.map(lambda v: isinstance(v, str)).all().all()  # Arrow-safe display table
     assert "Structural category" in set(shown["Metric"])
     fn = logic.compare_functions(a, b)
-    assert list(fn["Function"]) == ["count_zero_pairs"] and fn.loc[0, "Status"] == "unchanged id"
+    assert list(fn["Function"]) == ["count_pairs_with_sum"] and fn.loc[0, "Status"] == "in both"
     assert fn.loc[0, "Time before"] == "O(n^2)" and fn.loc[0, "Time after"] == "O(n)"
+    assert fn.loc[0, "Time growth"] == "lower" and fn.loc[0, "Cyclomatic"] == "4 → 2"
+    assert {"ML before (exp.)", "ML after (exp.)", "Space"} <= set(fn.columns)
+    assert fn.map(lambda v: isinstance(v, str)).all().all()
 
 
 def test_compare_added_and_removed_functions():
@@ -142,7 +145,7 @@ def test_app_starts_and_every_page_renders():
 
 
 def test_analyze_sample_shows_dashboard():
-    at = analyze(SAMPLES["Merge sort (divide and conquer)"])
+    at = analyze(SAMPLES["6. Merge sort"])
     no_crash(at)
     text = page_text(at)
     for label in ("Structural complexity", "Derived Complexity Score", "Code lines", "Functions", "Classes", "Loops",
@@ -199,8 +202,77 @@ def test_compare_page():
     at.sidebar.radio(key="nav").set_value("Compare versions").run()
     next(b for b in at.button if b.label == "Compare").click().run()
     no_crash(at)
-    assert "Summary of changes" in page_text(at)
-    assert len(at.dataframe) >= 1
+    text = page_text(at)
+    assert "Summary of changes" in text and "What actually changed" in text
+    assert "count_pairs_with_sum: static time estimate O(n^2) → O(n)" in text
+    assert len(at.dataframe) >= 2
+
+
+def _compare_page():
+    at = AppTest.from_file(APP, default_timeout=TIMEOUT)
+    at.run()
+    at.sidebar.radio(key="nav").set_value("Compare versions").run()
+    return at
+
+
+def test_compare_example_pair_loads_and_flags_shorter_but_slower():
+    from src.examples import get_pair
+    pair = get_pair("shorter_but_slower")
+    at = _compare_page()
+    at.selectbox(key="compare_pair").set_value(pair.title).run()
+    assert at.text_area(key="compare_before").value == pair.before
+    assert at.text_area(key="compare_after").value == pair.after
+    assert any(e.label.startswith("About this pair") for e in at.expander)
+    next(b for b in at.button if b.label == "Compare").click().run()
+    no_crash(at)
+    text = page_text(at)
+    assert "Shorter, but with a higher static time estimate" in text
+    assert "smallest: static time estimate O(n) → O(n log n)" in text
+
+
+def test_compare_swap_and_invalid_side():
+    at = _compare_page()
+    before, after = at.text_area(key="compare_before").value, at.text_area(key="compare_after").value
+    next(b for b in at.button if b.label == "Swap before/after").click().run()
+    assert (at.text_area(key="compare_before").value, at.text_area(key="compare_after").value) == (after, before)
+    at.text_area(key="compare_after").set_value("def broken(:\n    pass\n").run()
+    next(b for b in at.button if b.label == "Compare").click().run()
+    no_crash(at)
+    assert "Both versions must be valid Python" in page_text(at)
+    assert "Summary of changes" not in page_text(at)
+
+
+def test_compare_empty_side_is_rejected():
+    at = _compare_page()
+    at.text_area(key="compare_before").set_value("").run()
+    next(b for b in at.button if b.label == "Compare").click().run()
+    no_crash(at)
+    assert "Before:" in page_text(at) and "Summary of changes" not in page_text(at)
+
+
+def test_analyzer_example_loading_and_documentation_check():
+    from src.examples import get_example
+    e = get_example("deep_nesting")
+    at = AppTest.from_file(APP, default_timeout=TIMEOUT)
+    at.run()
+    at.selectbox(key="analyzer_sample").set_value(e.title).run()
+    assert at.text_area(key="analyzer_code").value == e.code
+    assert any(x.label == f"About this example: {e.pattern}" for x in at.expander)
+    next(b for b in at.button if b.label == "Analyze").click().run()
+    no_crash(at)
+    assert any(x.label.startswith("Documented expectations vs this analysis") for x in at.expander)
+    check = next(df.value for df in at.dataframe if "Documented" in df.value.columns)
+    assert not check["Status"].str.contains("differs").any()
+    assert (check.loc[check["Aspect"] == "Maximum nesting depth", "Measured"] == "6").all()
+
+
+def test_edited_example_is_not_treated_as_documented():
+    from src.examples import get_example
+    e = get_example("linear_search")
+    at = analyze(e.code.replace("return -1", "return None"))
+    no_crash(at)
+    assert not any(x.label.startswith("About this example") for x in at.expander)
+    assert not any(x.label.startswith("Documented expectations") for x in at.expander)
 
 
 # --------------------------------------------------------------------------- #

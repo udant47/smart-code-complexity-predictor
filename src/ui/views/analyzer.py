@@ -6,8 +6,9 @@ import streamlit as st
 
 from src.ui import logic, services
 from src.ui import components as ui
-from src.ui.samples import SAMPLES
-from src.ui.views import results
+from src.examples import find_by_code
+from src.ui.samples import DEFAULT_SAMPLE, SAMPLES
+from src.ui.views import example_info, results
 
 CODE_KEY = "analyzer_code"
 RESULT_KEY = "analyzer_result"
@@ -31,19 +32,23 @@ def render() -> None:
     ui.hero("Analyze Code. Understand Complexity.",
             "Explore structural complexity, function-level insights, and algorithmic analysis through static code inspection.")
 
-    st.session_state.setdefault(CODE_KEY, SAMPLES["Merge sort (divide and conquer)"])
+    st.session_state.setdefault(CODE_KEY, SAMPLES[DEFAULT_SAMPLE])
     c1, c2, c3 = st.columns([1, 2, 3])
     with c1:
         language = st.selectbox("Language", list(logic.LANGUAGES), key="analyzer_language",
                                 help="Python is fully supported. Other languages are listed but not supported yet.")
     with c2:
-        st.selectbox("Sample", [SAMPLE_PLACEHOLDER, *SAMPLES], key="analyzer_sample", on_change=_load_sample)
+        st.selectbox("Example", [SAMPLE_PLACEHOLDER, *SAMPLES], key="analyzer_sample", on_change=_load_sample,
+                     help="Documented demonstration examples. Each lists its expected structure and complexity.")
     with c3:
         ui.muted(logic.LANGUAGES[language]["note"])
 
     code = st.text_area("Python code", key=CODE_KEY, height=360, label_visibility="collapsed",
                         placeholder="Paste Python code here. It is parsed only, never executed.")
     check = logic.check_input(code, language)
+    example = find_by_code(code) if language == "Python" else None
+    if example:
+        example_info.render_about(example)
 
     left, mid, right = st.columns([3, 1, 1])
     with left:
@@ -90,4 +95,7 @@ def render() -> None:
                      "encoding": "Unreadable text encoding"}.get(e.get("code"), "The code could not be analysed")
             ui.callout("error", title, f"{e.get('message', '')} {e.get('hint') or ''}".strip())
         return
+    analysed_example = find_by_code(outcome["code"])
+    if analysed_example:
+        example_info.render_check(analysed_example, res)
     results.render(res, key="analyzer")

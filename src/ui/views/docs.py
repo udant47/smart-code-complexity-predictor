@@ -5,6 +5,7 @@ from __future__ import annotations
 import streamlit as st
 
 from src import config
+from src.examples import EXAMPLES
 from src.ui import services
 from src.ui import components as ui
 
@@ -18,6 +19,16 @@ def _model_numbers() -> str:
     return (f"On held-out test problems the saved model reaches macro F1 **{tm.get('macro_f1', 0):.3f}** "
             f"(95% interval {ci[0]:.2f}–{ci[1]:.2f}) and accuracy **{tm.get('accuracy', 0):.3f}** over seven classes. "
             "That is far better than chance and far from reliable: roughly half of the predictions are wrong.")
+
+
+def _examples_table() -> str:
+    rows = ["| Example | Pattern | Highest cyclomatic | Max nesting | Expected time (static class) |",
+            "|---|---|---|---|---|"]
+    for e in EXAMPLES:
+        times = "; ".join(f"`{c.function}` {c.static_time_class or 'Unknown'}" for c in e.complexity)
+        rows.append(f"| {e.title} | {e.pattern} | {e.structure['max_cyclomatic_complexity']} | "
+                    f"{e.structure['max_nesting_depth']} | {times} |")
+    return "\n".join(rows)
 
 
 SECTIONS = [
@@ -65,6 +76,23 @@ It reports time and **auxiliary** space (extra memory beyond the input) in the f
 patterns (for example `while queue`, data-dependent splits or unknown library calls) it says **Unknown** instead of
 guessing. Estimates are worst case and assume loops run to completion.
 """),
+    ("Examples & comparison", """
+The **Example** menu on the Analyzer loads eight documented programs. Each documents its expected structure and its
+expected asymptotic complexity with the assumptions that make it true (input-size variable, O(1) primitive
+operations, worst case). An automated test checks every documented structural value and static time class against
+the analyzer. **No ML class is documented**: the model may disagree with the documented complexity (for example on
+recursive Fibonacci), and the app shows that disagreement.
+
+{examples_table}
+
+The **Compare versions** page analyses two versions and reports measured differences only: structural category,
+Derived Complexity Score, cyclomatic complexity, nesting, functions, per-function static Big-O and space estimates,
+and ML outputs. Time estimates are compared by growth order only when both are static estimates with status
+"estimated". Directions are described as lower or higher, never as improvements. Line count is always reported
+with the caveat that shorter code is not necessarily simpler or faster; when code gets shorter while its time
+estimate grows, the page says so. The example pairs include *Shorter but slower* (`sorted(items)[0]` instead of
+a scan: fewer lines and lower structural metrics, but O(n log n) instead of O(n)).
+"""),
     ("Evaluation", """
 The **Model Evaluation** page shows only saved results: the model comparison, test macro F1 with a bootstrap
 interval over problems, the confusion matrix, per-class scores, grouped cross-validation by problem and by contest,
@@ -95,7 +123,8 @@ contributions) describe how the model uses features; they are associations, not 
 
 def render() -> None:
     ui.hero("Documentation", "How SmartCode analyses code, what its numbers mean, and where they stop being reliable.")
-    fmt = {"lines": config.MAX_SOURCE_LINES, "kb": config.MAX_SOURCE_BYTES // 1000, "model_numbers": _model_numbers()}
+    fmt = {"lines": config.MAX_SOURCE_LINES, "kb": config.MAX_SOURCE_BYTES // 1000, "model_numbers": _model_numbers(),
+           "examples_table": _examples_table()}
     names = [s[0] for s in SECTIONS]
     tabs = st.tabs(names)
     for tab, (title, body) in zip(tabs, SECTIONS):

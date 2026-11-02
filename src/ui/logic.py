@@ -16,7 +16,7 @@ from typing import Optional
 
 import pandas as pd
 
-from src import config
+from src import comparison, config
 
 # --------------------------------------------------------------------------- #
 # Languages and input validation
@@ -142,25 +142,7 @@ def functions_frame(result: dict) -> pd.DataFrame:
 # --------------------------------------------------------------------------- #
 # Before / after comparison
 # --------------------------------------------------------------------------- #
-COMPARE_METRICS = [
-    ("Code lines", "code_lines"),
-    ("Functions", "function_count"),
-    ("Classes", "class_count"),
-    ("Loops", "loop_count"),
-    ("File cyclomatic complexity", "file_cyclomatic_complexity"),
-    ("Highest function cyclomatic complexity", "max_function_cyclomatic_complexity"),
-    ("Maximum nesting depth", "maximum_nesting_depth"),
-    ("Derived Complexity Score (highest)", "derived_score"),
-]
-
-
-def _delta(a, b):
-    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
-        d = b - a
-        return round(d, 2) if isinstance(d, float) else d
-    return None
-
-
+# Comparison calculations live in src.comparison; these helpers shape them for display.
 def _show(v) -> str:
     if v is None:
         return "—"
@@ -180,59 +162,58 @@ def _signed(d) -> str:
 
 
 def compare_numeric(before: dict, after: dict) -> pd.DataFrame:
-    """Numeric metrics side by side (for charts and calculations)."""
-    a, b = overview(before), overview(after)
-    return pd.DataFrame([{"Metric": label, "Before": a.get(k), "After": b.get(k), "Change": _delta(a.get(k), b.get(k))}
-                         for label, k in COMPARE_METRICS])
+    """Numeric metrics side by side (for calculations)."""
+    comp = comparison.compare(before, after)
+    return pd.DataFrame([{"Metric": m.label, "Before": m.before, "After": m.after, "Change": m.change}
+                         for m in comp.metrics if m.key in dict(comparison.METRICS)])
+
+
+_DIRECTION_TEXT = {"lower": "lower", "higher": "higher", "same": "same", "changed": "changed", "n/a": "—"}
 
 
 def compare_overview(before: dict, after: dict) -> pd.DataFrame:
-    """Display table (all text, so mixed numeric and categorical rows render in one table)."""
-    num = compare_numeric(before, after)
-    rows = [{"Metric": r.Metric, "Before": _show(r.Before), "After": _show(r.After), "Change": _signed(r.Change)}
-            for r in num.astype(object).where(num.notna(), None).itertuples()]
-    a, b = overview(before), overview(after)
-    pa, pb = before.get("prediction") or {}, after.get("prediction") or {}
-    for label, x, y in (("Structural category", a["structural_category"], b["structural_category"]),
-                        ("Derived score band", a["derived_band"], b["derived_band"]),
-                        ("ML time-complexity class", pa.get("big_o"), pb.get("big_o"))):
-        rows.append({"Metric": label, "Before": _show(x), "After": _show(y), "Change": "same" if x == y else "changed"})
+    """Display table (all text, so mixed numeric and categorical rows render in one Arrow table)."""
+    comp = comparison.compare(before, after)
+    rows = []
+    for m in comp.metrics:
+        numeric = m.key in dict(comparison.METRICS)
+        rows.append({"Metric": m.label, "Before": _show(m.before), "After": _show(m.after),
+                     "Change": _signed(m.change) if numeric else _DIRECTION_TEXT[m.direction],
+                     "Direction": _DIRECTION_TEXT[m.direction]})
     return pd.DataFrame(rows)
 
 
+def _pair(a, b) -> str:
+    if a is None and b is None:
+        return "—"
+    return f"{_show(a)} → {_show(b)}"
+
+
+def _ml(label, p) -> Optional[str]:
+    if label is None:
+        return None
+    return f"{label} ({p:.0%})" if isinstance(p, (int, float)) else label
+
+
 def compare_functions(before: dict, after: dict) -> pd.DataFrame:
-    """Per-function metrics matched by function id (qualified name)."""
-    def index(r):
-        return {f["function_id"]: f for f in r.get("functions") or []}
-
-    ia, ib = index(before), index(after)
-    order = list(ia) + [k for k in ib if k not in ia]
+    """Per-function comparison, matched by qualified name (display table)."""
+    comp = comparison.compare(before, after)
     rows = []
-    for fid in order:
-        fa, fb = ia.get(fid), ib.get(fid)
-        status = "unchanged id" if fa and fb else ("removed" if fa else "added")
-
-        def g(f, key, sub="metrics"):
-            if not f:
-                return None
-            if sub == "metrics":
-                return (f.get("metrics") or {}).get(key)
-            if sub == "score":
-                return (f.get("derived_score") or {}).get("score")
-            if sub == "time":
-                return (f.get("static_estimate") or {}).get("time_complexity")
-            return f.get(key)
-
+    for f in comp.functions:
         rows.append({
-            "Function": fid, "Status": status,
-            "Lines before": g(fa, "function_length"), "Lines after": g(fb, "function_length"),
-            "Cyclomatic before": g(fa, "cyclomatic_complexity"), "Cyclomatic after": g(fb, "cyclomatic_complexity"),
-            "Cyclomatic change": _delta(g(fa, "cyclomatic_complexity"), g(fb, "cyclomatic_complexity")),
-            "Nesting before": g(fa, "maximum_nesting_depth"), "Nesting after": g(fb, "maximum_nesting_depth"),
-            "Nesting change": _delta(g(fa, "maximum_nesting_depth"), g(fb, "maximum_nesting_depth")),
-            "Score before": g(fa, None, "score"), "Score after": g(fb, None, "score"),
-            "Score change": _delta(g(fa, None, "score"), g(fb, None, "score")),
-            "Time before": g(fa, None, "time"), "Time after": g(fb, None, "time"),
+            "Function": f.function_id, "Status": f.status,
+            "Lines": _pair(f.lines_before, f.lines_after),
+            "Cyclomatic": _pair(f.cyclomatic_before, f.cyclomatic_after),
+            "Cyclomatic change": _signed(comparison._delta(f.cyclomatic_before, f.cyclomatic_after)),
+            "Nesting": _pair(f.nesting_before, f.nesting_after),
+            "Nesting change": _signed(comparison._delta(f.nesting_before, f.nesting_after)),
+            "Score": _pair(f.score_before, f.score_after),
+            "Time before": _show(f.time_before), "Time after": _show(f.time_after),
+            "Time growth": {"lower": "lower", "higher": "higher", "same": "same"}.get(
+                f.time_change, "not comparable" if f.status == "in both" else "—"),
+            "Space": _pair(f.space_before, f.space_after),
+            "ML before (exp.)": _show(_ml(f.ml_before, f.ml_probability_before)),
+            "ML after (exp.)": _show(_ml(f.ml_after, f.ml_probability_after)),
         })
     return pd.DataFrame(rows)
 
