@@ -39,9 +39,9 @@ RUNTIME_MODULES = ["app.py", "src/predictor.py", "src/code_parser.py", "src/feat
                    "src/function_analyzer.py", "src/algorithm_analyzer.py", "src/pattern_features.py",
                    "src/complexity_score.py", "src/suggestions.py", "src/explainability.py", "src/comparison.py",
                    "src/examples.py", "src/asymptotics.py", "src/model_integrity.py", "src/config.py",
-                   *[str(p.relative_to(ROOT)) for p in (ROOT / "src" / "ui").rglob("*.py")],
-                   *[str(p.relative_to(ROOT)) for p in (ROOT / "src" / "languages").rglob("*.py")],
-                   *[str(p.relative_to(ROOT)) for p in (ROOT / "src" / "repository").rglob("*.py")]]
+                   *[p.relative_to(ROOT).as_posix() for p in (ROOT / "src" / "ui").rglob("*.py")],
+                   *[p.relative_to(ROOT).as_posix() for p in (ROOT / "src" / "languages").rglob("*.py")],
+                   *[p.relative_to(ROOT).as_posix() for p in (ROOT / "src" / "repository").rglob("*.py")]]
 # File-system writes. (json.dump/pickle-style writes need a handle from open(), which is checked separately;
 # DataFrame.rename and similar in-memory methods are deliberately not listed.)
 WRITE_CALLS = {"write_text", "write_bytes", "unlink", "rmtree", "mkdir", "makedirs", "touch", "chmod", "savefig",
@@ -79,7 +79,7 @@ def _enclosing_function(node, parents):
 # --------------------------------------------------------------------------- #
 # Static checks
 # --------------------------------------------------------------------------- #
-@pytest.mark.parametrize("path", APP_FILES, ids=lambda p: str(p.relative_to(ROOT)))
+@pytest.mark.parametrize("path", APP_FILES, ids=lambda p: p.relative_to(ROOT).as_posix())
 def test_no_execution_primitives_shell_or_dynamic_imports(path):
     offenders = []
     for node, _, _ in _calls(path):
