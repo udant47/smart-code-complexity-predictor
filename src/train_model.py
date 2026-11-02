@@ -89,6 +89,7 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
 from src import config
+from src import model_integrity
 from src import preprocessing as pp
 from src.dataset_loader import BIGO_LABELS
 
@@ -357,6 +358,7 @@ def run(quick: bool = False, out_dir: Path = REPORT_DIR, models_dir: Path = conf
     if save_model:
         models_dir.mkdir(parents=True, exist_ok=True)
         joblib.dump(fitted[best["key"]], models_dir / config.MODEL_PATH.name)
+        metadata = model_integrity.attach(metadata, models_dir, [config.MODEL_PATH.name])
         (models_dir / config.MODEL_METADATA_PATH.name).write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     (out_dir / "model_report.md").write_text(render_report(results, best_i, metadata, per_class, split), encoding="utf-8")
     if verbose:

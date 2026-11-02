@@ -1091,6 +1091,20 @@ class _FunctionAnalyzer:
         return Cost.const()
 
     def _unresolved(self, e: ast.Call) -> Cost:
+        # A call into code outside this file that receives a whole input collection could cost anything
+        # (np.linalg.inv(a) is O(n^3)), so the time is Unknown rather than an assumed O(1).
+        for arg in list(e.args) + [k.value for k in e.keywords]:
+            if isinstance(arg, ast.Starred):
+                arg = arg.value
+            try:
+                size = self.coll_size(arg)
+            except Exception:  # defensive: size inference must never break the analysis
+                size = None
+            # Items of a collection (symbols ending in "[*]") are assumed constant-size, as elsewhere.
+            if size is not None and any(not sym.endswith("[*]") for sym in size.symbols()):
+                return self._unknown_time(
+                    f"line {e.lineno}: {ast.unparse(e.func)}() is not defined in this file and receives the "
+                    f"collection {ast.unparse(arg)}, so its cost cannot be bounded")
         self._assume(
             f"{ast.unparse(e.func)}() is not defined in this file and is assumed to be O(1).",
             "low",

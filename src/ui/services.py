@@ -47,8 +47,7 @@ def _failure(where: str, exc: Exception) -> dict:
                     f"(error type: {type(exc).__name__})."}
 
 
-@st.cache_data(show_spinner=False, max_entries=64)
-def _analyze_cached(code: str, stamp: tuple) -> dict:
+def _analyze_uncached(code: str) -> dict:
     from src.predictor import predict
 
     try:
@@ -57,8 +56,21 @@ def _analyze_cached(code: str, stamp: tuple) -> dict:
         return {"ok": False, "result": None, "error": _failure("analysis", exc)}
 
 
+@st.cache_data(show_spinner=False, max_entries=64)
+def _analyze_cached(code: str, stamp: tuple) -> dict:
+    return _analyze_uncached(code)
+
+
 def analyze(code: str) -> dict:
     """{"ok", "result" (predictor dict), "error"}; ok=False only on an internal failure."""
+    try:
+        code.encode("utf-8")
+    except UnicodeEncodeError:
+        # Text that is not valid Unicode (lone surrogates) cannot be hashed for the cache; the parser
+        # rejects it with a friendly "encoding" error, so analyse it directly.
+        return _analyze_uncached(code)
+    except AttributeError:  # not a string
+        return {"ok": False, "result": None, "error": _failure("analysis", TypeError("code must be text"))}
     return _analyze_cached(code, _model_stamp())
 
 

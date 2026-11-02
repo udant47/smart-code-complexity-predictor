@@ -114,8 +114,13 @@ contributions) describe how the model uses features; they are associations, not 
   read it. A test confirms that analysing code containing file writes does not perform them.
 * Input size and nesting depth are limited to prevent resource exhaustion.
 * Text from the code (function names, messages) is HTML-escaped before it is displayed.
-* The saved model files are Python pickles (joblib). Only load model files produced by this project; never accept
-  model files from users.
+* The saved model files are Python pickles (joblib), and loading a pickle can run code. Before loading, SmartCode
+  checks that each file is a regular file under 512 MB whose SHA-256 matches the hash recorded in
+  `model_metadata.json` when the model was trained. A replaced or tampered file is refused before it is unpickled.
+  This guards against swapped or corrupted files, not against someone who can already edit both the model and its
+  metadata on your computer. Model files are never accepted from users, and the app has no upload widget.
+* Calls to code outside the file are not executed either: when such a call receives a whole input collection, the
+  static estimate says Unknown rather than assuming it is cheap.
 * Internal errors are logged for the developer and shown to users as a short message with a reference id, never as a traceback.
 """),
 ]

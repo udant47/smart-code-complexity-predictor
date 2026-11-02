@@ -57,6 +57,7 @@ from sklearn.metrics import confusion_matrix, f1_score, precision_recall_fscore_
 from sklearn.model_selection import StratifiedGroupKFold
 
 from src import config
+from src import model_integrity
 from src import preprocessing as pp
 from src import train_model as tm
 from src import tune_model
@@ -778,6 +779,7 @@ def run(df: Optional[pd.DataFrame] = None, split: Optional[pp.SplitResult] = Non
                       "Not validated on everyday code, on single functions, or for space complexity; weaker on "
                       "algorithm families absent from training."),
         }
+        meta = model_integrity.attach(meta, models_dir)  # SHA-256 of both files; checked before every load
         (models_dir / config.MODEL_METADATA_PATH.name).write_text(json.dumps(meta, indent=2, default=str), encoding="utf-8")
     log("saved report" + (" and model" if save else ""))
     return result

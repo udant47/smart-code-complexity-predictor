@@ -47,6 +47,8 @@ def sidebar() -> str:
         else:
             st.markdown(ui.badge("Model unavailable", "#d29922"), unsafe_allow_html=True)
             ui.muted(status["issue"]["message"])
+            if status["issue"].get("hint"):
+                ui.muted(status["issue"]["hint"])
             ui.muted("Static analysis still works.")
         st.divider()
         ui.muted("Python only · code is parsed, never executed")

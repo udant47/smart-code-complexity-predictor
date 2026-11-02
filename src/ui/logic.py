@@ -80,6 +80,8 @@ ML_ERROR_TITLES = {
     "model_metadata_invalid": "The model's metadata file could not be read (it may be corrupt).",
     "model_incompatible": "The saved model does not match this version of the feature extractor.",
     "model_load_failed": "The model file could not be loaded (it may be corrupt or from another library version).",
+    "model_unverified": "The model files have no recorded integrity hash, so they were not loaded.",
+    "model_integrity_failed": "The model files do not match the hashes recorded at training time, so they were not loaded.",
     "feature_schema_error": "The model input could not be built from the extracted features.",
 }
 

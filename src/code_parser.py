@@ -221,7 +221,19 @@ def parse_source(
         )
 
     # 2. Size limits - checked BEFORE parsing so huge input costs nothing ---- #
-    size = len(source.encode("utf-8"))
+    try:
+        size = len(source.encode("utf-8"))
+    except UnicodeEncodeError as exc:  # lone surrogates (e.g. from a broken paste) are not valid text
+        line = source.count("\n", 0, exc.start) + 1
+        return _failure(
+            source,
+            ParseError(
+                kind=ERR_ENCODING,
+                message=f"The code contains an invalid character (unpaired surrogate) on line {line}.",
+                hint="Re-copy the code from its original file, or delete the broken character.",
+                lineno=line,
+            ),
+        )
     if size > max_bytes:
         return _failure(
             source,
@@ -343,6 +355,9 @@ def _collect_definitions(
     """
     functions: list[FunctionInfo] = []
     classes: list[ClassInfo] = []
+    # Lines with their endings, computed once (ast.get_source_segment re-splits the whole
+    # source on every call, which is quadratic for files with many functions).
+    kept = [ln + "\n" for ln in lines[:-1]] + lines[-1:]
 
     # Stack items: (node, scope) where scope is a tuple of enclosing
     # (kind, qualname) pairs; kind is "class" or "function".
@@ -382,7 +397,7 @@ def _collect_definitions(
                     class_name=class_name,
                     decorators=tuple(_unparse(d) for d in node.decorator_list),
                     parameters=_parameter_names(node),
-                    source=ast.get_source_segment(source, node) or "",
+                    source=_segment(kept, node),
                 )
             )
             new_scope = scope + (("function", qualname),)
@@ -466,6 +481,23 @@ def _byte_to_char(lines: list[str], lineno: int, byte_offset: int) -> int:
 # --------------------------------------------------------------------------- #
 # Errors and helpers
 # --------------------------------------------------------------------------- #
+def _segment(kept: list[str], node: ast.AST) -> str:
+    """Same result as ``ast.get_source_segment(source, node)`` for '\\n'-normalised source,
+    using lines split once (``kept`` keeps the line endings)."""
+    try:
+        lineno, end_lineno = node.lineno - 1, node.end_lineno - 1
+        col, end_col = node.col_offset, node.end_col_offset
+    except (AttributeError, TypeError):
+        return ""
+    if end_lineno is None or end_col is None or end_lineno >= len(kept):
+        return ""
+    if lineno == end_lineno:
+        return kept[lineno].encode()[col:end_col].decode()
+    first = kept[lineno].encode()[col:].decode()
+    last = kept[end_lineno].encode()[:end_col].decode()
+    return first + "".join(kept[lineno + 1:end_lineno]) + last
+
+
 def _normalise(source: str) -> str:
     """Strip a leading BOM and use '\\n' line endings (Windows files use \\r\\n)."""
     if source.startswith("﻿"):

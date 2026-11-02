@@ -59,14 +59,19 @@ streamlit run app.py             # launch dashboard
 
 ## 10. Testing
 ```powershell
-python -m pytest
+python -m pytest                       # about 800 tests, about 3 minutes
+python -m src.model_integrity verify   # installed model files match the hashes recorded at training time
 ```
+See [TESTING.md](TESTING.md) for the test map and a step-by-step manual test checklist.
 
 ## 11. Screenshots
 See `screenshots/` — TODO
 
 ## 12. Safety
-Code is analysed with `ast.parse` only — never imported, `exec`'d or `eval`'d.
+Code is analysed with `ast.parse` only: it is never imported, `exec`'d or `eval`'d. Tests run hostile programs
+through the analyzer with `exec`/`eval`/shell calls trapped. Model pickles are loaded only if their SHA-256 matches
+the hash recorded at training time. Input is limited to 200 KB and 5,000 lines, and the app listens on localhost
+only. See [SECURITY.md](SECURITY.md) for the full review.
 
 ## 13. Future work
 TODO

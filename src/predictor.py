@@ -56,7 +56,9 @@ that order from the extractor output; a missing or non-finite value is an
 error, not a silent default.
 
 Security note: ``joblib`` files are pickles and can run code when loaded.
-Only load model files this project produced; never accept them from users.
+Before unpickling, ``src.model_integrity.check_file`` requires each file to be
+a regular file below a size limit whose SHA-256 matches the hash recorded in
+the metadata at training time. Model files are never accepted from users.
 """
 
 from __future__ import annotations
@@ -73,6 +75,7 @@ import numpy as np
 import pandas as pd
 
 from src import config
+from src import model_integrity as integrity
 from src import preprocessing as pp
 from src.algorithm_analyzer import analyze_algorithms
 from src import complexity_score as dcs
@@ -239,6 +242,11 @@ def load_model(model_path: Path = config.MODEL_PATH, metadata_path: Path = confi
             "The saved model's feature list does not match this version of the feature extractor.",
             "Retrain: python -m src.dataset_loader build, then the training commands.",
         )
+    for path in (model_path, preprocessing_path):
+        try:
+            integrity.check_file(path, meta)
+        except integrity.IntegrityError as exc:
+            raise ModelUnavailable(exc.code, exc.message, exc.hint) from exc
     try:
         pipeline = joblib.load(model_path)
         preprocessing = joblib.load(preprocessing_path)
@@ -302,9 +310,7 @@ def feature_vector(features: list, values: dict) -> pd.DataFrame:
     return pd.DataFrame([row], columns=features)
 
 
-def _ml_prediction(model: LoadedModel, values: dict, experimental: bool = False, note: str = "") -> MLPrediction:
-    X = feature_vector(model.features, values)
-    proba = model.pipeline.predict_proba(X)[0]
+def _ml_from_proba(model: LoadedModel, proba, experimental: bool = False, note: str = "") -> MLPrediction:
     order = np.argsort(proba)[::-1]
     top, second = int(order[0]), int(order[1])
     label = model.classes[top]
@@ -320,6 +326,32 @@ def _ml_prediction(model: LoadedModel, values: dict, experimental: bool = False,
     return MLPrediction(label=label, big_o=BIGO_OF[label], probability=round(p, 4), probabilities=probs,
                         runner_up=BIGO_OF[model.classes[second]], margin=round(p - float(proba[second]), 4),
                         measured_accuracy_in_range=measured, experimental=experimental, note=note)
+
+
+def _ml_prediction(model: LoadedModel, values: dict, experimental: bool = False, note: str = "") -> MLPrediction:
+    X = feature_vector(model.features, values)
+    return _ml_from_proba(model, model.pipeline.predict_proba(X)[0], experimental, note)
+
+
+def _ml_predictions_batch(model: LoadedModel, rows: list, experimental: bool = True, note: str = "") -> list:
+    """One predict_proba call for many feature dicts (same results as calling _ml_prediction on each).
+
+    Rows whose features are invalid get None instead of failing the whole batch.
+    """
+    frames, keep = [], []
+    for i, values in enumerate(rows):
+        try:
+            frames.append(feature_vector(model.features, values))
+            keep.append(i)
+        except ValueError:
+            continue
+    out: list = [None] * len(rows)
+    if not frames:
+        return out
+    proba = model.pipeline.predict_proba(pd.concat(frames, ignore_index=True))
+    for i, row in zip(keep, proba):
+        out[i] = _ml_from_proba(model, row, experimental, note)
+    return out
 
 
 def _all_features(parsed: ParseResult) -> dict:
@@ -418,25 +450,30 @@ def predict(source, *, model_path: Path = config.MODEL_PATH, metadata_path: Path
 
         result.explanation = explain_features(file_values, model=model).to_dict()
 
-    # 8. Per-function ML (experimental: the model was trained on whole programs)
+    # 8. Per-function ML (experimental: the model was trained on whole programs).
+    #    Features are collected first and predicted in one batch: one forest call instead of one per function.
     if per_function_ml:
-        n_done = 0
+        targets, rows = [], []
+        source_by_line: dict = {}
+        for fi in parsed.functions:
+            source_by_line.setdefault(fi.lineno, fi.source)
         for f, info in zip(result.functions, functions.functions):
             if info.end_line - info.start_line + 1 < MIN_FUNCTION_LINES_FOR_ML:
                 continue
-            source_segment = next((fi.source for fi in parsed.functions if fi.lineno == f.start_line), None)
+            source_segment = source_by_line.get(f.start_line)
             if not source_segment:
                 continue
             sub = parse_source(textwrap.dedent(source_segment))
             if not sub.success:
                 continue
-            try:
-                f.ml_prediction = _ml_prediction(
-                    model, _all_features(sub), experimental=True,
-                    note="Model trained on whole programs; applied to this function alone.")
+            targets.append(f)
+            rows.append(_all_features(sub))
+        n_done = 0
+        note = "Model trained on whole programs; applied to this function alone."
+        for f, ml in zip(targets, _ml_predictions_batch(model, rows, experimental=True, note=note)):
+            if ml is not None:
+                f.ml_prediction = ml
                 n_done += 1
-            except ValueError:
-                continue
         if n_done:
             result.warnings.append(Issue(
                 "experimental_function_predictions",

@@ -17,6 +17,7 @@ import pytest
 import sklearn
 from sklearn.ensemble import RandomForestClassifier
 
+from src import model_integrity
 from src import config
 from src import predictor as pr
 from src import preprocessing as pp
@@ -77,6 +78,7 @@ def model_dir(tmp_path_factory):
         "versions": {"scikit-learn": sklearn.__version__},
         "scope": "test fixture",
     }
+    meta = model_integrity.attach(meta, out)
     (out / "model_metadata.json").write_text(json.dumps(meta), encoding="utf-8")
     return out
 
@@ -193,9 +195,17 @@ def test_unknown_feature_set_is_rejected(model_dir, tmp_path):
     assert pr.predict(MERGE_SORT, **paths(d)).errors[0].code == "model_incompatible"
 
 
-def test_corrupt_model_file(model_dir, tmp_path):
+def test_replaced_model_file_is_refused_before_unpickling(model_dir, tmp_path):
     d = _copy(model_dir, tmp_path)
     (d / "complexity_model.joblib").write_bytes(b"not a model")
+    r = pr.predict(MERGE_SORT, **paths(d))
+    assert r.prediction is None and r.errors[0].code == "model_integrity_failed"
+
+
+def test_corrupt_but_registered_model_file(model_dir, tmp_path):
+    d = _copy(model_dir, tmp_path)
+    (d / "complexity_model.joblib").write_bytes(b"not a model")
+    model_integrity.register(d)  # hashes match, so loading is attempted and fails cleanly
     r = pr.predict(MERGE_SORT, **paths(d))
     assert r.prediction is None and r.errors[0].code == "model_load_failed"
 

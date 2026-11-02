@@ -17,6 +17,7 @@ import pytest
 import sklearn
 from sklearn.ensemble import RandomForestClassifier
 
+from src import model_integrity
 from src import config
 from src import explainability as ex
 from src import predictor as pr
@@ -72,6 +73,7 @@ def setup(tmp_path_factory):
     meta = {"selected_model": "Random Forest", "feature_set": "patterns", "features": FEATURES,
             "classes": pp.CLASS_ORDER, "test_metrics": {"macro_f1": None},
             "versions": {"scikit-learn": sklearn.__version__}}
+    meta = model_integrity.attach(meta, out)
     (out / "model_metadata.json").write_text(json.dumps(meta), encoding="utf-8")
     model = pr.load_model(out / "complexity_model.joblib", out / "model_metadata.json",
                           out / "preprocessing_pipeline.joblib")

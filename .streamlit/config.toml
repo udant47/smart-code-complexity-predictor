@@ -12,6 +12,9 @@ showErrorDetails = false
 toolbarMode = "minimal"
 
 [server]
+# Listen on this computer only. Remove this line (or use --server.address 0.0.0.0) only if you deliberately
+# want other devices on your network to reach the app; it has no login.
+address = "localhost"
 # 1 MB upload/message limit is plenty: the analyzer accepts up to 200 KB of code.
 maxUploadSize = 1
 runOnSave = false

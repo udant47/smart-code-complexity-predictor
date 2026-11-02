@@ -325,8 +325,12 @@ def test_missing_model_keeps_static_results(tmp_path):
 
 
 def test_corrupt_model_is_reported(tmp_path):
-    meta = {"feature_set": "patterns", "features": __import__("src.preprocessing", fromlist=["x"]).feature_columns("patterns")}
-    paths = _model_files(tmp_path, model_path=b"not a pickle", preprocessing_path=b"junk", metadata_path=json.dumps(meta))
+    from src import model_integrity
+    from src.preprocessing import feature_columns
+    paths = _model_files(tmp_path, model_path=b"not a pickle", preprocessing_path=b"junk")
+    meta = model_integrity.attach({"feature_set": "patterns", "features": feature_columns("patterns")}, tmp_path,
+                                  ["m.joblib", "pre.joblib"])  # registered junk: loading is attempted and fails
+    paths["metadata_path"].write_text(json.dumps(meta))
     r = predict(CODE, **paths).to_dict()
     assert r["errors"][0]["code"] == "model_load_failed"
     at = _render_result(r)
@@ -350,3 +354,29 @@ def test_corrupt_metadata_is_reported(tmp_path):
     at = _render_result(r)
     no_crash(at)
     assert "could not be read" in page_text(at)
+
+
+def test_unverified_model_is_explained_with_the_fix(tmp_path):
+    """A model trained before Phase 18 has no recorded hash: it is not loaded, and the page says how to fix it."""
+    import shutil
+
+    from src import model_integrity
+    from src.predictor import PREPROCESSING_PATH
+
+    if not config.MODEL_PATH.exists():
+        pytest.skip("no trained model on this computer")
+    d = tmp_path / "models"
+    d.mkdir()
+    for p in (config.MODEL_PATH, config.MODEL_METADATA_PATH, PREPROCESSING_PATH):
+        shutil.copy(p, d / p.name)
+    meta = json.loads((d / config.MODEL_METADATA_PATH.name).read_text())
+    meta.pop("integrity", None)
+    (d / config.MODEL_METADATA_PATH.name).write_text(json.dumps(meta))
+    r = predict(CODE, model_path=d / config.MODEL_PATH.name, metadata_path=d / config.MODEL_METADATA_PATH.name,
+                preprocessing_path=d / PREPROCESSING_PATH.name).to_dict()
+    assert r["errors"][0]["code"] == "model_unverified"
+    at = _render_result(r)
+    no_crash(at)
+    text = page_text(at)
+    assert "no recorded integrity hash" in text and model_integrity.REGISTER_COMMAND in text
+    assert "static analysis below" in text
