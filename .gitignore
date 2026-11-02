@@ -1,14 +1,26 @@
+# ---------------------------------------------------------------------------
+# SmartCode .gitignore
+# Code, tests, docs, screenshots and the small evaluation reports are committed.
+# Environments, caches, downloaded datasets, trained models and local output are not.
+# ---------------------------------------------------------------------------
+
 # Virtual environments
 .venv/
 venv/
 env/
+ENV/
 
-# Python bytecode / caches
+# Python bytecode, caches and tool state
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
 .ipynb_checkpoints/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 
 # Build / packaging
@@ -20,20 +32,41 @@ dist/
 .vscode/*
 !.vscode/settings.json
 .idea/
+*.swp
+*~
 Thumbs.db
 desktop.ini
 .DS_Store
 
-# Streamlit local secrets
-.streamlit/secrets.toml
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+tmp/
+scratch/
 
-# Data & models: keep folders, ignore generated content
+# Secrets and credentials (never commit these)
+.env
+.env.*
+.streamlit/secrets.toml
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+credentials*.json
+
+# Datasets: downloaded and rebuilt locally (CodeComplex's licence is not stated,
+# so its data is never redistributed). Keep the folders.
 data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+
+# Trained models: pickles are rebuilt with the training commands (about 31 MB).
+# Never commit or download model pickles from untrusted sources.
 models/*
 !models/.gitkeep
 
-# Environment variables
-.env
+# Local output of `python -m src.repository` (contains absolute local paths)
+reports/repository/

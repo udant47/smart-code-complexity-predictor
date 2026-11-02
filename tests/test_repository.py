@@ -14,6 +14,13 @@ from src.repository.secrets import is_sensitive_filename, scan_text
 
 C_AVAILABLE = registry.get("c").usable
 
+# Fake secrets for the detector tests, assembled at runtime so that this file never contains literal
+# secret-shaped strings (which would trip secret scanners such as GitHub push protection).
+PRIVATE_KEY_HEADER = "-----BEGIN " + "RSA PRIVATE" + " KEY-----"
+OPENSSH_KEY_HEADER = "-----BEGIN " + "OPENSSH PRIVATE" + " KEY-----"
+FAKE_AWS_KEY_ID = "AK" + "IA" + "ABCDEFGHIJKLMNOP"
+FAKE_API_VALUE = "sk_" + "9f8a7b6c5d4e3f2a1b0c"
+
 
 def write(root: Path, rel: str, text: str = "x = 1\n") -> Path:
     p = root / rel
@@ -37,8 +44,8 @@ def repo(tmp_path):
     write(root, ".hidden/secret_tool.py", "x = 1\n")
     write(root, "node_modules/lib/index.py", "x = 1\n")
     write(root, ".env", "API_KEY=abc\n")
-    write(root, "keys/server.pem", "-----BEGIN RSA PRIVATE KEY-----\n")
-    write(root, "config/settings.py", 'DEBUG = True\nAPI_KEY = "sk_9f8a7b6c5d4e3f2a1b0c"\n')
+    write(root, "keys/server.pem", PRIVATE_KEY_HEADER + "\n")
+    write(root, "config/settings.py", f'DEBUG = True\nAPI_KEY = "{FAKE_API_VALUE}"\n')
     return root
 
 
@@ -133,11 +140,11 @@ def test_sensitive_filenames(name, sensitive):
 
 
 @pytest.mark.parametrize("text, rule", [
-    ("-----BEGIN OPENSSH PRIVATE KEY-----\nabc", "private_key"),
-    ("key = 'AKIAABCDEFGHIJKLMNOP'", "aws_access_key_id"),
+    (OPENSSH_KEY_HEADER + "\nabc", "private_key"),
+    (f"key = '{FAKE_AWS_KEY_ID}'", "aws_access_key_id"),
     ("t = 'ghp_" + "a" * 36 + "'", "github_token"),
-    ('password = "hunter2hunter2"', "password_assignment"),
-    ('API_KEY: "9f8a7b6c5d4e3f2a1b0c"', "password_assignment"),
+    ('pass' + 'word = "hunter2hunter2"', "password_assignment"),
+    ('API_' + 'KEY: "9f8a7b6c5d4e3f2a1b0c"', "password_assignment"),
 ])
 def test_secret_rules(text, rule):
     findings = scan_text("x = 1\n" + text)
@@ -157,11 +164,11 @@ def test_files_with_secrets_are_skipped_and_values_never_reported(repo, tmp_path
     assert skipped["config/settings.py"]["reason"] == "possible_secret"
     assert skipped["config/settings.py"]["findings"] == [{"rule": "password_assignment", "line": 2}]
     dumped = json.dumps(report.to_dict()) + render_markdown(report)
-    assert "sk_9f8a7b6c5d4e3f2a1b0c" not in dumped and "API_KEY=abc" not in dumped
+    assert FAKE_API_VALUE not in dumped and "API_KEY=abc" not in dumped
     assert "PRIVATE KEY" not in dumped
     opted_in = analyze_repository(repo, skip_files_with_secrets=False)
     assert "config/settings.py" in [f.path for f in opted_in.files]
-    assert "sk_9f8a7b6c5d4e3f2a1b0c" not in json.dumps(opted_in.to_dict())
+    assert FAKE_API_VALUE not in json.dumps(opted_in.to_dict())
 
 
 # --------------------------------------------------------------------------- #

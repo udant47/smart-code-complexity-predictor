@@ -9,7 +9,8 @@ python -m pytest -k "checklist"       # the Phase 18 requirement checklist
 python -m src.model_integrity verify  # are the installed model files the ones recorded at training time?
 ```
 
-The suite has 802 tests across 22 files. One test is skipped when the optional SHAP package is not installed.
+The suite has 940 tests across 24 files. On Windows, expect 936 passed and 4 skipped: the SHAP cross-check (SHAP
+not installed), two symlink tests (Windows only allows symlinks with Developer Mode on) and one POSIX-only named-pipe test.
 Tests that need a trained model build a small one in a temporary folder, so they do not depend on your `models/`
 folder. The exception is two tests that check the installed model: they skip when no model has been trained.
 
@@ -24,9 +25,10 @@ folder. The exception is two tests that check the installed model: they skip whe
 | Security (no execution, no shell, no dynamic imports, no file writes, config) | `test_security.py` |
 | Robustness (hostile and malformed input, exact size limits, timing, uploads) | `test_robustness.py` |
 | Examples and before/after comparison | `test_examples.py`, `test_comparison.py` |
+| Languages (common schema, C analyzer) and repository analysis | `test_languages.py`, `test_repository.py` |
 | Training, evaluation, explainability, recommendations, dataset | `test_train_model.py`, `test_evaluate_model.py`, `test_explainability.py`, `test_suggestions.py`, `test_dataset_loader.py`, `test_eda.py` |
 
-Line coverage measured with `pytest-cov` (optional, not a project requirement): 91% over `src/` and `app.py`.
+Line coverage measured with `pytest-cov` (optional, not a project requirement): 92% over `src/` and `app.py`.
 
 ## 2. Manual testing
 

@@ -1,5 +1,5 @@
 # Smart Code Complexity Predictor - runtime + test dependencies
-# Target: Python 3.11 or 3.12 on Windows (64-bit)
+# Target: Python 3.11 (tested on Windows 64-bit; the test suite also passes on 3.13)
 
 streamlit>=1.39,<2.0
 pandas>=2.2,<3.0
