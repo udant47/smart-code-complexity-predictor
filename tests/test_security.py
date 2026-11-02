@@ -39,7 +39,9 @@ RUNTIME_MODULES = ["app.py", "src/predictor.py", "src/code_parser.py", "src/feat
                    "src/function_analyzer.py", "src/algorithm_analyzer.py", "src/pattern_features.py",
                    "src/complexity_score.py", "src/suggestions.py", "src/explainability.py", "src/comparison.py",
                    "src/examples.py", "src/asymptotics.py", "src/model_integrity.py", "src/config.py",
-                   *[str(p.relative_to(ROOT)) for p in (ROOT / "src" / "ui").rglob("*.py")]]
+                   *[str(p.relative_to(ROOT)) for p in (ROOT / "src" / "ui").rglob("*.py")],
+                   *[str(p.relative_to(ROOT)) for p in (ROOT / "src" / "languages").rglob("*.py")],
+                   *[str(p.relative_to(ROOT)) for p in (ROOT / "src" / "repository").rglob("*.py")]]
 # File-system writes. (json.dump/pickle-style writes need a handle from open(), which is checked separately;
 # DataFrame.rename and similar in-memory methods are deliberately not listed.)
 WRITE_CALLS = {"write_text", "write_bytes", "unlink", "rmtree", "mkdir", "makedirs", "touch", "chmod", "savefig",
@@ -49,9 +51,11 @@ FS_MODULE_CALLS = {"remove", "rename", "replace", "unlink", "rmdir", "removedirs
                    "symlink", "link", "truncate", "copy", "copy2", "copyfile", "copytree", "move", "rmtree"}
 # Functions that legitimately write files. They are command-line report writers, never called by the app:
 # write_outputs is `python -m src.explainability`, _plot_bars is only called from write_outputs, and
-# register/main are `python -m src.model_integrity register`.
+# register/main are `python -m src.model_integrity register`, and write_outputs is the report writer of
+# `python -m src.repository` (it refuses an output folder inside the analysed folder).
 WRITE_ALLOWED = {("src/explainability.py", "write_outputs"), ("src/explainability.py", "_plot_bars"),
-                 ("src/model_integrity.py", "register"), ("src/model_integrity.py", "main")}
+                 ("src/model_integrity.py", "register"), ("src/model_integrity.py", "main"),
+                 ("src/repository/__main__.py", "write_outputs")}
 
 
 def _calls(path: Path):

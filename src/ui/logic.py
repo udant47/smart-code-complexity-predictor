@@ -21,11 +21,25 @@ from src import comparison, config
 # --------------------------------------------------------------------------- #
 # Languages and input validation
 # --------------------------------------------------------------------------- #
+def _c_language() -> dict:
+    from src.languages import registry
+
+    ok, reason = registry.get("c").available()
+    if ok:
+        return {"supported": True, "id": "c", "mode": "structural",
+                "note": "Experimental: structural metrics only (tree-sitter C parser). No ML class, Big-O estimate "
+                        "or Derived Complexity Score."}
+    return {"supported": False, "id": "c", "mode": "structural", "note": f"Not available on this computer. {reason}"}
+
+
 LANGUAGES = {
-    "Python": {"supported": True, "note": "Fully supported (Python 3 syntax of the running interpreter)."},
-    "JavaScript": {"supported": False, "note": "Not supported yet: the parser and model are Python-only."},
-    "Java": {"supported": False, "note": "Not supported yet: the parser and model are Python-only."},
-    "C++": {"supported": False, "note": "Not supported yet: the parser and model are Python-only."},
+    "Python": {"supported": True, "id": "python", "mode": "full",
+               "note": "Fully supported (Python 3 syntax of the running interpreter)."},
+    "C": _c_language(),
+    "JavaScript": {"supported": False, "id": "javascript", "mode": None,
+                   "note": "Not supported: no JavaScript parser is integrated."},
+    "Java": {"supported": False, "id": "java", "mode": None, "note": "Not supported: no Java parser is integrated."},
+    "C++": {"supported": False, "id": "cpp", "mode": None, "note": "Not supported: no C++ parser is integrated."},
 }
 WARN_LINES = 1500  # analysis gets slower above this; still allowed up to the parser's hard limit
 
@@ -55,10 +69,11 @@ def check_input(code: str, language: str = "Python") -> InputCheck:
     if lang is None or not lang["supported"]:
         chk.errors.append({"code": "unsupported_language",
                            "message": f"{language} is not supported.",
-                           "hint": "SmartCode currently analyses Python only. Switch the language to Python."})
+                           "hint": "SmartCode analyses Python (full analysis) and, when its parser is installed, "
+                                   "C (structural metrics only)."})
     if not code.strip():
         chk.errors.append({"code": "empty", "message": "There is no code to analyse.",
-                           "hint": "Paste Python code or choose a sample."})
+                           "hint": "Paste code or choose an example."})
     if n_bytes > config.MAX_SOURCE_BYTES:
         chk.errors.append({"code": "too_large", "message": f"The input is {n_bytes:,} bytes; the limit is "
                            f"{config.MAX_SOURCE_BYTES:,} bytes.", "hint": "Analyse one module or a few functions at a time."})

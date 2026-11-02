@@ -74,6 +74,31 @@ def analyze(code: str) -> dict:
     return _analyze_cached(code, _model_stamp())
 
 
+def _analyze_language_uncached(code: str, language_id: str) -> dict:
+    from src.languages import registry
+
+    try:
+        return {"ok": True, "report": registry.analyzer_for(language_id).analyze(code).to_dict(), "error": None}
+    except Exception as exc:  # never let a traceback reach the page
+        return {"ok": False, "report": None, "error": _failure("analysis", exc)}
+
+
+@st.cache_data(show_spinner=False, max_entries=64)
+def _analyze_language_cached(code: str, language_id: str) -> dict:
+    return _analyze_language_uncached(code, language_id)
+
+
+def analyze_language(code: str, language_id: str) -> dict:
+    """Structural analysis through the language registry (used for C). {"ok", "report", "error"}."""
+    try:
+        code.encode("utf-8")
+    except UnicodeEncodeError:
+        return _analyze_language_uncached(code, language_id)
+    except AttributeError:
+        return {"ok": False, "report": None, "error": _failure("analysis", TypeError("code must be text"))}
+    return _analyze_language_cached(code, language_id)
+
+
 @st.cache_data(show_spinner=False)
 def _model_status_cached(stamp: tuple) -> dict:
     from src.predictor import ModelUnavailable, get_model

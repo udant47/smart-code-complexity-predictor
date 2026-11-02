@@ -7,12 +7,15 @@ import streamlit as st
 from src.ui import logic, services
 from src.ui import components as ui
 from src.examples import find_by_code
+from src.languages.c_examples import C_EXAMPLES_BY_TITLE, find_c_example
 from src.ui.samples import DEFAULT_SAMPLE, SAMPLES
-from src.ui.views import example_info, results
+from src.ui.views import example_info, language_results, results
 
 CODE_KEY = "analyzer_code"
 RESULT_KEY = "analyzer_result"
 SAMPLE_PLACEHOLDER = "Choose a sample…"
+C_SAMPLE_KEY = "analyzer_sample_c"
+C_SAMPLES = {title: e.code for title, e in C_EXAMPLES_BY_TITLE.items()}
 
 
 def _load_sample():
@@ -22,9 +25,17 @@ def _load_sample():
         st.session_state.pop(RESULT_KEY, None)
 
 
+def _load_c_sample():
+    name = st.session_state.get(C_SAMPLE_KEY)
+    if name and name in C_SAMPLES:
+        st.session_state[CODE_KEY] = C_SAMPLES[name]
+        st.session_state.pop(RESULT_KEY, None)
+
+
 def _clear():
     st.session_state[CODE_KEY] = ""
     st.session_state["analyzer_sample"] = SAMPLE_PLACEHOLDER
+    st.session_state[C_SAMPLE_KEY] = SAMPLE_PLACEHOLDER
     st.session_state.pop(RESULT_KEY, None)
 
 
@@ -36,19 +47,28 @@ def render() -> None:
     c1, c2, c3 = st.columns([1, 2, 3])
     with c1:
         language = st.selectbox("Language", list(logic.LANGUAGES), key="analyzer_language",
-                                help="Python is fully supported. Other languages are listed but not supported yet.")
+                                help="Python: full analysis. C: experimental, structural metrics only. "
+                                     "Other languages are listed but not supported.")
+    is_c = logic.LANGUAGES[language].get("id") == "c"
     with c2:
-        st.selectbox("Example", [SAMPLE_PLACEHOLDER, *SAMPLES], key="analyzer_sample", on_change=_load_sample,
-                     help="Documented demonstration examples. Each lists its expected structure and complexity.")
+        if is_c:
+            st.selectbox("Example", [SAMPLE_PLACEHOLDER, *C_SAMPLES], key=C_SAMPLE_KEY, on_change=_load_c_sample,
+                         help="C versions of the Python examples, with documented structural values.")
+        else:
+            st.selectbox("Example", [SAMPLE_PLACEHOLDER, *SAMPLES], key="analyzer_sample", on_change=_load_sample,
+                         help="Documented demonstration examples. Each lists its expected structure and complexity.")
     with c3:
         ui.muted(logic.LANGUAGES[language]["note"])
 
-    code = st.text_area("Python code", key=CODE_KEY, height=360, label_visibility="collapsed",
-                        placeholder="Paste Python code here. It is parsed only, never executed.")
+    code = st.text_area("Code", key=CODE_KEY, height=360, label_visibility="collapsed",
+                        placeholder="Paste code here. It is parsed only, never executed or compiled.")
     check = logic.check_input(code, language)
     example = find_by_code(code) if language == "Python" else None
     if example:
         example_info.render_about(example)
+    if is_c and logic.LANGUAGES[language]["supported"] and find_by_code(code):
+        ui.callout("info", "This is Python code", "Choose a C example or paste C code, or switch the language "
+                   "back to Python.")
 
     left, mid, right = st.columns([3, 1, 1])
     with left:
@@ -62,8 +82,8 @@ def render() -> None:
                         disabled=not logic.LANGUAGES[language]["supported"])
 
     if not logic.LANGUAGES[language]["supported"]:
-        ui.callout("warning", f"{language} is not supported", "SmartCode analyses Python only. No results are produced "
-                   "for other languages rather than showing results that would be wrong.")
+        ui.callout("warning", f"{language} is not supported", logic.LANGUAGES[language]["note"] + " No results are "
+                   "produced rather than showing results that would be wrong.")
     for w in check.warnings:
         ui.callout("info", w["message"])
 
@@ -74,7 +94,10 @@ def render() -> None:
             st.session_state.pop(RESULT_KEY, None)
             return
         with st.spinner("Analysing…"):
-            st.session_state[RESULT_KEY] = {"code": code, **services.analyze(code)}
+            if is_c:
+                st.session_state[RESULT_KEY] = {"code": code, "language": "c", **services.analyze_language(code, "c")}
+            else:
+                st.session_state[RESULT_KEY] = {"code": code, "language": "python", **services.analyze(code)}
 
     outcome = st.session_state.get(RESULT_KEY)
     if not outcome:
@@ -85,6 +108,10 @@ def render() -> None:
     if not outcome["ok"]:
         e = outcome["error"]
         ui.callout("error", e["message"], e.get("hint") or "")
+        return
+    if outcome.get("language") == "c":
+        language_results.render(outcome["report"], C_EXAMPLES_BY_TITLE.get(
+            getattr(find_c_example(outcome["code"]), "title", "")))
         return
     res = outcome["result"]
     if not res["success"]:

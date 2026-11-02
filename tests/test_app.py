@@ -62,8 +62,15 @@ def test_check_input():
     assert mid.ok and mid.warnings
 
 
-def test_only_python_is_supported():
-    assert [k for k, v in logic.LANGUAGES.items() if v["supported"]] == ["Python"]
+def test_supported_languages_are_honest():
+    from src.languages import registry
+
+    expected = ["Python"] + (["C"] if registry.get("c").usable else [])
+    assert [k for k, v in logic.LANGUAGES.items() if v["supported"]] == expected
+    assert logic.LANGUAGES["Python"]["mode"] == "full" and logic.LANGUAGES["C"]["mode"] == "structural"
+    assert "structural metrics only" in logic.LANGUAGES["C"]["note"] or "Not available" in logic.LANGUAGES["C"]["note"]
+    for lang in ("JavaScript", "Java", "C++"):
+        assert not logic.LANGUAGES[lang]["supported"] and "Not supported" in logic.LANGUAGES[lang]["note"]
 
 
 def test_overview_and_function_frame_come_from_results():
@@ -380,3 +387,61 @@ def test_unverified_model_is_explained_with_the_fix(tmp_path):
     text = page_text(at)
     assert "no recorded integrity hash" in text and model_integrity.REGISTER_COMMAND in text
     assert "static analysis below" in text
+
+
+# --------------------------------------------------------------------------- #
+# C (Phase 19): experimental, structural only
+# --------------------------------------------------------------------------- #
+needs_c = pytest.mark.skipif(not logic.LANGUAGES["C"]["supported"], reason="tree-sitter C parser not installed")
+
+
+@needs_c
+def test_c_example_is_analysed_with_structural_metrics_only():
+    from src.languages.c_examples import C_EXAMPLES
+
+    ex = next(e for e in C_EXAMPLES if e.key == "deep_nesting")
+    at = AppTest.from_file(APP, default_timeout=TIMEOUT)
+    at.run()
+    at.selectbox(key="analyzer_language").set_value("C").run()
+    at.selectbox(key="analyzer_sample_c").set_value(ex.title).run()
+    assert at.text_area(key="analyzer_code").value == ex.code
+    next(b for b in at.button if b.label == "Analyze").click().run()
+    no_crash(at)
+    text = page_text(at)
+    assert "C analysis is experimental and structural only" in text and "Not available for C" in text
+    assert "MAX NESTING DEPTH" in text.upper()
+    fdf = next(df.value for df in at.dataframe if "Function" in df.value.columns)
+    assert fdf.loc[0, "Function"] == "approve_loan" and fdf.loc[0, "Nesting"] == 6 and fdf.loc[0, "Flags"] == "nesting ≥ 4"
+    check = next(df.value for df in at.dataframe if "Documented" in df.value.columns)
+    assert check["Status"].eq("✓ matches").all()
+    for python_only in ("Derived Complexity Score", "ML time-complexity class (whole file)"):
+        assert python_only.upper() not in "\n".join(m.value.upper() for m in at.markdown if "sc-card" in m.value)
+
+
+@needs_c
+def test_c_syntax_error_and_cpp_are_refused_in_the_ui():
+    at = analyze("int f() { FOR(i, n) { x++; } }", language="C")
+    no_crash(at)
+    text = page_text(at)
+    assert "The C code could not be parsed" in text and "No partial metrics" in text
+    at = analyze("class A { public: int x; };", language="C")
+    no_crash(at)
+    assert "Unsupported language" in page_text(at) and "C++" in page_text(at)
+
+
+@needs_c
+def test_python_code_with_c_selected_gets_a_hint():
+    at = AppTest.from_file(APP, default_timeout=TIMEOUT)
+    at.run()
+    at.selectbox(key="analyzer_language").set_value("C").run()
+    no_crash(at)
+    assert "This is Python code" in page_text(at)
+
+
+def test_c_unavailable_is_disabled(monkeypatch):
+    monkeypatch.setitem(logic.LANGUAGES, "C", {"supported": False, "id": "c", "mode": "structural",
+                                               "note": "Not available on this computer. Install the C parser."})
+    at = analyze("int f(void) { return 0; }", language="C")
+    no_crash(at)
+    assert next(b for b in at.button if b.label == "Analyze").disabled
+    assert "C is not supported" in page_text(at) and "Not available on this computer" in page_text(at)

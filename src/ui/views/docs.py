@@ -93,6 +93,19 @@ with the caveat that shorter code is not necessarily simpler or faster; when cod
 estimate grows, the page says so. The example pairs include *Shorter but slower* (`sorted(items)[0]` instead of
 a scan: fewer lines and lower structural metrics, but O(n log n) instead of O(n)).
 """),
+    ("Languages", """
+**Python** gets the full analysis. **C** is experimental and gets structural metrics only: functions, loops,
+conditionals, cyclomatic complexity, nesting, recursion and calls, mapped onto the same definitions as Python.
+It uses the tree-sitter C grammar, a real C parser; Python's `ast` is never used for C. Any C the parser cannot
+fully understand (syntax errors, macros that change the syntax, C++ code) is refused with its location rather
+than measured approximately. The preprocessor is not run, so function-like macros look like calls, and code in
+every `#if` branch is counted. The ML class, Big-O estimate, Derived Complexity Score and recommendations are
+Python-only. **C++, Java and JavaScript are not supported.**
+
+Whole folders can be summarised from the command line with `python -m src.repository PATH`. This is read-only,
+skips symlinks, credential files and files that look like they contain secrets, and enforces size and time
+limits. See `docs/EXTENSIBILITY.md`.
+"""),
     ("Evaluation", """
 The **Model Evaluation** page shows only saved results: the model comparison, test macro F1 with a bootstrap
 interval over problems, the confusion matrix, per-class scores, grouped cross-validation by problem and by contest,

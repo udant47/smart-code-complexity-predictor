@@ -51,7 +51,7 @@ def sidebar() -> str:
                 ui.muted(status["issue"]["hint"])
             ui.muted("Static analysis still works.")
         st.divider()
-        ui.muted("Python only · code is parsed, never executed")
+        ui.muted("Python: full analysis · C: structural only (experimental) · code is parsed, never executed")
         ui.muted(f"v{__version__}")
     return page
 

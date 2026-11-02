@@ -57,6 +57,13 @@ streamlit run app.py             # launch dashboard
 - Supported patterns — TODO
 - Known limitations (dynamic dispatch, input-dependent loops, library calls) — TODO
 
+## 9b. Languages and repository analysis
+- **Python:** full analysis. **C:** experimental, structural metrics only, through the tree-sitter C parser.
+  **C++, Java, JavaScript:** not supported.
+- Analyse a whole local folder (read-only):
+  `python -m src.repository "C:\path\to\project"`. This writes `reports/repository/repository_report.md`.
+- Design, language differences and how to add a language: [docs/EXTENSIBILITY.md](docs/EXTENSIBILITY.md).
+
 ## 10. Testing
 ```powershell
 python -m pytest                       # about 800 tests, about 3 minutes

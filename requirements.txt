@@ -9,6 +9,10 @@ plotly>=5.24,<7.0
 matplotlib>=3.9,<4.0
 joblib>=1.4,<2.0
 
+# C parser for the experimental C analysis (Phase 19). Optional: without it, C is shown as unavailable.
+tree-sitter==0.25.2
+tree-sitter-c==0.24.1
+
 # Testing
 pytest>=8.3,<9.0
 
