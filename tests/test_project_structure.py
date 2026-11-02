@@ -44,3 +44,9 @@ def test_core_dependencies_installed():
 
 def test_project_root_has_app():
     assert (PROJECT_ROOT / "app.py").is_file()
+
+
+def test_test_ids_fit_in_a_windows_environment_variable(request):
+    """pytest stores the running test's ID in PYTEST_CURRENT_TEST; Windows caps variables at 32,767 characters."""
+    longest = max(request.session.items, key=lambda item: len(item.nodeid))
+    assert len(longest.nodeid) < 1000, f"{len(longest.nodeid)} characters: {longest.nodeid[:120]}"
