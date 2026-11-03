@@ -77,13 +77,14 @@ import pandas as pd
 from src import config
 from src import model_integrity as integrity
 from src import preprocessing as pp
-from src.algorithm_analyzer import analyze_algorithms
+from src.algorithm_analyzer import analyze_algorithms, analyze_script
 from src import complexity_score as dcs
 from src.code_parser import ParseResult, parse_bytes, parse_source
 from src.dataset_loader import BIGO_LABELS, STRUCTURAL_BANDS, structural_band
 from src.feature_extractor import FILE_FEATURE_NAMES, extract_features
 from src.function_analyzer import analyze_functions
-from src.pattern_features import PATTERN_FEATURE_NAMES, extract_pattern_features
+from src.pattern_features import PATTERN_FEATURE_NAMES
+from src.analysis_features import ANALYSIS_FEATURE_NAMES, program_features
 from src.suggestions import suggest
 
 PREPROCESSING_PATH = config.MODELS_DIR / "preprocessing_pipeline.joblib"
@@ -161,6 +162,7 @@ class PredictionResult:
     derived_score: Optional[dict] = None  # file summary of the Derived Complexity Score
     recommendations: Optional[dict] = None  # refactoring review guidance, see src/suggestions.py
     explanation: Optional[dict] = None  # per-prediction explanation (predict(..., explain=True)); see src/explainability.py
+    program_estimate: Optional[dict] = None  # static estimate of module-level (script) code, see analyze_script
 
     def to_dict(self) -> dict:
         return json.loads(json.dumps(asdict(self), default=_json_default))
@@ -355,8 +357,7 @@ def _ml_predictions_batch(model: LoadedModel, rows: list, experimental: bool = T
 
 
 def _all_features(parsed: ParseResult) -> dict:
-    report = extract_features(parsed)
-    return {**report.file_features, **extract_pattern_features(parsed.tree)}
+    return program_features(parsed)
 
 
 def predict(source, *, model_path: Path = config.MODEL_PATH, metadata_path: Path = config.MODEL_METADATA_PATH,
@@ -384,8 +385,8 @@ def predict(source, *, model_path: Path = config.MODEL_PATH, metadata_path: Path
 
     # 3. File-level metrics
     feats = extract_features(parsed)
-    file_values = {**feats.file_features, **extract_pattern_features(parsed.tree)}
-    result.file_metrics = {k: file_values[k] for k in (*FILE_FEATURE_NAMES, *PATTERN_FEATURE_NAMES)}
+    file_values = program_features(parsed, feats.file_features)  # same function the dataset builder uses
+    result.file_metrics = {k: file_values[k] for k in (*FILE_FEATURE_NAMES, *PATTERN_FEATURE_NAMES, *ANALYSIS_FEATURE_NAMES)}
 
     # 4. Functions: structural metrics, rule-based category, static Big-O estimate
     functions = analyze_functions(parsed)
@@ -421,6 +422,8 @@ def predict(source, *, model_path: Path = config.MODEL_PATH, metadata_path: Path
         "counts": {b[0]: bands.count(b[0]) for b in STRUCTURAL_BANDS},
         "module_level": structural_band(feats.file_features["cyclomatic_complexity"]),
     }
+    script = analyze_script(parsed)  # module-level code (e.g. a competitive-programming script); None if none
+    result.program_estimate = script.to_dict() if script is not None else None
     result.recommendations = suggest(parsed).to_dict()  # rule-based, independent of the ML model
     if not result.functions:
         result.warnings.append(Issue("no_functions", "No functions found: function-level results are empty; "

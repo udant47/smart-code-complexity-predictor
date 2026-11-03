@@ -9,7 +9,7 @@ python -m pytest -k "checklist"       # the Phase 18 requirement checklist
 python -m src.model_integrity verify  # are the installed model files the ones recorded at training time?
 ```
 
-The suite has 940 tests across 24 files. On Windows, expect 936 passed and 4 skipped: the SHAP cross-check (SHAP
+The suite has 994 tests across 25 files. On Windows, expect 990 passed and 4 skipped: the SHAP cross-check (SHAP
 not installed), two symlink tests (Windows only allows symlinks with Developer Mode on) and one POSIX-only named-pipe test.
 Tests that need a trained model build a small one in a temporary folder, so they do not depend on your `models/`
 folder. The exception is two tests that check the installed model: they skip when no model has been trained.
@@ -25,10 +25,11 @@ folder. The exception is two tests that check the installed model: they skip whe
 | Security (no execution, no shell, no dynamic imports, no file writes, config) | `test_security.py` |
 | Robustness (hostile and malformed input, exact size limits, timing, uploads) | `test_robustness.py` |
 | Examples and before/after comparison | `test_examples.py`, `test_comparison.py` |
+| Final improvement phase: script analysis, sorting algorithms, new features, training/inference feature equality, calibration, audit | `test_improvements.py` |
 | Languages (common schema, C analyzer) and repository analysis | `test_languages.py`, `test_repository.py` |
 | Training, evaluation, explainability, recommendations, dataset | `test_train_model.py`, `test_evaluate_model.py`, `test_explainability.py`, `test_suggestions.py`, `test_dataset_loader.py`, `test_eda.py` |
 
-Line coverage measured with `pytest-cov` (optional, not a project requirement): 92% over `src/` and `app.py`.
+Line coverage measured with `pytest-cov` (optional, not a project requirement): 91% over `src/` and `app.py`.
 
 ## 2. Manual testing
 
@@ -42,7 +43,7 @@ Open http://localhost:8501 and work through the checks below. Each one says what
 especially a red Python traceback, is a bug.
 
 ### A. Normal use
-1. **Startup.** The sidebar shows *Model loaded* with *Random Forest · 57 features*. If it says
+1. **Startup.** The sidebar shows *Model loaded* with *Random Forest · 61 features*. If it says
    *Model unavailable — No integrity hash is recorded*, run `python -m src.model_integrity register` once and
    restart the app.
 2. **Examples.** In *Example*, pick each of the eight examples and press **Analyze**. Each one shows a
@@ -52,8 +53,13 @@ especially a red Python traceback, is a bug.
 4. **Compare.** In the sidebar choose **Compare versions**, pick *Shorter but slower: sorting to find the minimum*,
    and press **Compare**. There is an orange warning: *Shorter, but with a higher static time estimate*.
    Press **Swap before/after**, then **Compare**: the directions reverse.
-5. **Other pages.** *Model evaluation* shows the saved metrics (test macro F1 0.442). *Documentation* opens all
+5. **Other pages.** *Model evaluation* shows the saved metrics (test macro F1 0.460) and the tabs *Feature importance*,
+   *Confidence & calibration* (ECE 0.074) and *Improvement history* (before 0.442 → after 0.460). *Documentation* opens all
    its tabs, including *Examples & comparison* and *Security*.
+
+6a. **Scripts.** Paste `n = int(input())`, then `a = list(map(int, input().split()))` and a double loop over `a`.
+    In *Algorithm analysis* an expander *Module-level code (script) · time O(n^2)* appears. Above the cards, the
+    expander *What is the difference between these measures?* explains the five measures.
 
 ### B. Bad input
 6. **Empty input.** Press **Clear**, then **Analyze**. Expected: *There is no code to analyse*.

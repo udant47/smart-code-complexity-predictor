@@ -85,7 +85,8 @@ import pandas as pd
 from src import config
 from src.code_parser import parse_source
 from src.feature_extractor import FILE_FEATURE_NAMES, FUNCTION_FEATURE_NAMES, extract_features
-from src.pattern_features import PATTERN_FEATURE_NAMES, extract_pattern_features
+from src.pattern_features import PATTERN_FEATURE_NAMES
+from src.analysis_features import ANALYSIS_FEATURE_NAMES, program_features
 from src.function_analyzer import analyze_functions
 
 # --------------------------------------------------------------------------- #
@@ -400,7 +401,7 @@ def near_duplicate_clusters(rows: list[dict], group_key: str, threshold: float =
 # --------------------------------------------------------------------------- #
 # Big-O dataset (CodeComplex)
 # --------------------------------------------------------------------------- #
-BIGO_FEATURE_COLUMNS = tuple(FILE_FEATURE_NAMES) + tuple(PATTERN_FEATURE_NAMES)
+BIGO_FEATURE_COLUMNS = tuple(FILE_FEATURE_NAMES) + tuple(PATTERN_FEATURE_NAMES) + tuple(ANALYSIS_FEATURE_NAMES)
 BIGO_META_COLUMNS = (
     "sample_id", "source_dataset", "source_commit", "raw_index", "problem", "tags",
     "label", "label_name", "label_bigo", "label_rank", "label_method",
@@ -440,7 +441,7 @@ def build_bigo_dataset(records: list[dict]) -> tuple[pd.DataFrame, dict]:
             "_renamed": token_hash(renamed),
             "_shingles": shingles(renamed),
             "code_sha256": sha256_bytes(src.encode("utf-8")),
-            "features": {**report.file_features, **extract_pattern_features(report.parse_result.tree)},
+            "features": program_features(report.parse_result, report.file_features),
         })
 
     valid = len(rows)

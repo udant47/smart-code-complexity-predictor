@@ -399,7 +399,8 @@ def test_ml_model_loading(model_dir):  # noqa: F811
 PREDICTION_KEYS = {"label", "big_o", "probability", "probabilities", "runner_up", "margin",
                    "measured_accuracy_in_range", "experimental", "note"}
 RESULT_KEYS = {"success", "errors", "warnings", "file_metrics", "file_summary", "structural_category",
-               "prediction", "functions", "model", "derived_score", "recommendations", "explanation"}
+               "prediction", "functions", "model", "derived_score", "recommendations", "explanation",
+               "program_estimate"}
 FUNCTION_KEYS = {"function_id", "name", "kind", "class_name", "start_line", "end_line", "metrics",
                  "structural_category", "static_estimate", "derived_score", "ml_prediction"}
 

@@ -49,7 +49,8 @@ def test_tuning_result_structure(tuning):
     assert tuning["adopted"] in ("tuned", "phase10")
     assert set(tuning["searches"]) == {"patterns", "patterns_no_size"}
     source = tuning["tuned"] if tuning["adopted"] == "tuned" else tuning["before"]
-    assert tuning["chosen"] == {k: source[k] for k in ("feature_set", "params")}
+    assert tuning["chosen"] == {k: source[k] for k in ("model", "feature_set", "params")}
+    assert tuning["chosen"]["model"] in tune_model.FOREST_MODELS
     for part in ("before", "tuned"):
         assert 0 <= tuning[part]["rcv_macro_f1"] <= 1
     assert tuning["rcv_gain"] == pytest.approx(tuning["tuned"]["rcv_macro_f1"] - tuning["before"]["rcv_macro_f1"])

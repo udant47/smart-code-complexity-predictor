@@ -20,7 +20,7 @@ tuning used the same rows. Both test scores are shown for transparency; they did
 
 ## 2. Final model on the test set
 
-Configuration: Random Forest, `patterns` features, `{"class_weight": "balanced_subsample", "max_features": "sqrt", "min_samples_leaf": 3, "n_estimators": 300}`;
+Configuration: Random Forest, `patterns` features, `{"n_estimators": 300, "max_features": "sqrt", "min_samples_leaf": 3, "class_weight": "balanced_subsample"}`;
 trained on 3,644 train + validation rows; tested once on 814 rows from unseen problems.
 
 | Accuracy | Balanced acc. | Macro precision | Macro recall | Macro F1 [95% CI] | Weighted F1 |
@@ -40,6 +40,18 @@ trained on 3,644 train + validation rows; tested once on 814 rows from unseen pr
 | O(n^2) | 0.3 | 0.47 | 0.37 | 100 |
 | O(n^3) | 0.52 | 0.29 | 0.38 | 112 |
 | O(2^n) | 0.43 | 0.38 | 0.41 | 86 |
+
+### Confidence is not calibrated probability
+
+The app shows the forest's top vote share as a confidence score. Measured on the test set:
+
+| ECE (top label, 10 bins) | Multiclass Brier | Log loss | Mean top vote share | Accuracy |
+| ---: | ---: | ---: | ---: | ---: |
+| 0.082 | 0.676 | 1.496 | 0.505 | 0.453 |
+
+ECE is the average gap between the vote share and how often such predictions were right; 0 would be
+perfectly calibrated. No calibration step (e.g. isotonic regression) is applied, so vote shares are
+reported as confidence scores, together with the measured accuracy per vote-share range.
 
 ## 3. Generalization
 

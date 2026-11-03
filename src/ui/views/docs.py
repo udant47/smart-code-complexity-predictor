@@ -60,9 +60,12 @@ The model predicts a program's **time-complexity class** (O(1), O(log n), O(n), 
 It was trained on **CodeComplex** (Python solutions to Codeforces problems labelled by experts), after removing
 exact and renamed duplicates. Data were split **by problem**, so no test problem was seen in training, and
 preprocessing lives inside scikit-learn pipelines so nothing from validation or test data leaks into training.
-Ten kinds of model (from dummy baselines and a loop-nesting rule to logistic regression, SVM, trees, boosting
-and a voting ensemble), each on two feature sets, were compared by repeated grouped cross-validation; a Random Forest with 300 trees was selected and the
-test set was used once. Vote shares are the fraction of trees agreeing; they are not calibrated probabilities, so
+Eleven kinds of model (from dummy baselines and a loop-nesting rule to logistic regression, SVM, Random Forest,
+Extra Trees, boosting and a voting ensemble), each on up to three feature sets, were compared by repeated grouped
+cross-validation. The rule was fixed in advance: highest cross-validated macro F1, and within 0.005 of it the
+simplest model. The test set was used once. The final feature set adds four features taken from the rule-based
+analyzer's own estimate; a further nine AST counts were measured and not adopted because they added less than the
+margin. Vote shares are the fraction of trees agreeing; they are not calibrated probabilities, so
 SmartCode also shows how often predictions at that level were correct on the test set.
 
 {model_numbers}

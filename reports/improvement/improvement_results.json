@@ -1,0 +1,271 @@
+{
+  "before_after": [
+    {
+      "metric": "Accuracy (test)",
+      "before": 0.4533,
+      "after": 0.4533,
+      "change": 0.0
+    },
+    {
+      "metric": "Balanced accuracy (test)",
+      "before": 0.4424,
+      "after": 0.4424,
+      "change": 0.0
+    },
+    {
+      "metric": "Macro precision (test)",
+      "before": 0.4797,
+      "after": 0.4797,
+      "change": 0.0
+    },
+    {
+      "metric": "Macro recall (test)",
+      "before": 0.4424,
+      "after": 0.4424,
+      "change": 0.0
+    },
+    {
+      "metric": "Macro F1 (test)",
+      "before": 0.4422,
+      "after": 0.4422,
+      "change": 0.0
+    },
+    {
+      "metric": "Weighted F1 (test)",
+      "before": 0.4515,
+      "after": 0.4515,
+      "change": 0.0
+    },
+    {
+      "metric": "Expected calibration error (lower is better)",
+      "before": 0.0819,
+      "after": 0.0819,
+      "change": 0.0
+    },
+    {
+      "metric": "Multiclass Brier score (lower is better)",
+      "before": 0.6765,
+      "after": 0.6765,
+      "change": 0.0
+    },
+    {
+      "metric": "Repeated grouped CV macro F1 (train + validation)",
+      "before": 0.5358,
+      "after": 0.5358,
+      "change": 0.0
+    }
+  ],
+  "per_class": [
+    {
+      "class": "O(1)",
+      "F1 before": 0.443,
+      "F1 after": 0.443,
+      "change": 0.0,
+      "support": 132
+    },
+    {
+      "class": "O(log n)",
+      "F1 before": 0.433,
+      "F1 after": 0.433,
+      "change": 0.0,
+      "support": 113
+    },
+    {
+      "class": "O(n)",
+      "F1 before": 0.439,
+      "F1 after": 0.439,
+      "change": 0.0,
+      "support": 128
+    },
+    {
+      "class": "O(n log n)",
+      "F1 before": 0.629,
+      "F1 after": 0.629,
+      "change": 0.0,
+      "support": 143
+    },
+    {
+      "class": "O(n^2)",
+      "F1 before": 0.37,
+      "F1 after": 0.37,
+      "change": 0.0,
+      "support": 100
+    },
+    {
+      "class": "O(n^3)",
+      "F1 before": 0.377,
+      "F1 after": 0.377,
+      "change": 0.0,
+      "support": 112
+    },
+    {
+      "class": "O(2^n)",
+      "F1 before": 0.405,
+      "F1 after": 0.405,
+      "change": 0.0,
+      "support": 86
+    }
+  ],
+  "baseline_check": {
+    "baseline_reproduced": true,
+    "recomputed_macro_f1": 0.4422,
+    "recorded_macro_f1": 0.4422
+  },
+  "feature_ablation": [
+    {
+      "feature_set": "patterns (previous, 57)",
+      "n_features": 57,
+      "rcv_macro_f1": 0.5358,
+      "rcv_std": 0.0769,
+      "gain_vs_previous": 0.0,
+      "within_margin_of_best": false
+    },
+    {
+      "feature_set": "patterns + static estimate (61)",
+      "n_features": 61,
+      "rcv_macro_f1": 0.5485,
+      "rcv_std": 0.0743,
+      "gain_vs_previous": 0.0127,
+      "within_margin_of_best": false
+    },
+    {
+      "feature_set": "patterns + extra AST counts (66)",
+      "n_features": 66,
+      "rcv_macro_f1": 0.5485,
+      "rcv_std": 0.0842,
+      "gain_vs_previous": 0.0127,
+      "within_margin_of_best": false
+    },
+    {
+      "feature_set": "patterns + both (70)",
+      "n_features": 70,
+      "rcv_macro_f1": 0.5554,
+      "rcv_std": 0.0793,
+      "gain_vs_previous": 0.0196,
+      "within_margin_of_best": true
+    }
+  ],
+  "analyzer_benchmark": [
+    {
+      "algorithm": "Linear search",
+      "expected (worst case)": "O(n)",
+      "static estimate": "O(n)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    },
+    {
+      "algorithm": "Binary search (iterative)",
+      "expected (worst case)": "O(log n)",
+      "static estimate": "O(log n)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    },
+    {
+      "algorithm": "Binary search (recursive)",
+      "expected (worst case)": "O(log n)",
+      "static estimate": "O(log n)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    },
+    {
+      "algorithm": "Sequential loops",
+      "expected (worst case)": "O(n)",
+      "static estimate": "O(n)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    },
+    {
+      "algorithm": "Bubble sort",
+      "expected (worst case)": "O(n^2)",
+      "static estimate": "O(n^2)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    },
+    {
+      "algorithm": "Selection sort",
+      "expected (worst case)": "O(n^2)",
+      "static estimate": "O(n^2)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    },
+    {
+      "algorithm": "Insertion sort",
+      "expected (worst case)": "O(n^2)",
+      "static estimate": "O(n^2)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    },
+    {
+      "algorithm": "Merge sort",
+      "expected (worst case)": "O(n log n)",
+      "static estimate": "O(n log n)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    },
+    {
+      "algorithm": "Quick sort (list partitions)",
+      "expected (worst case)": "O(n^2)",
+      "static estimate": "Unknown",
+      "verdict": "not estimated (Unknown)",
+      "reason when Unknown": "recursive calls (line 8, 8) do not all shrink the same argument by a constant step or factor (sizes depend on the data, e.g. quicksort partitions: O(n log n) average, O(n^2) worst case)"
+    },
+    {
+      "algorithm": "Heap sort (heapq)",
+      "expected (worst case)": "O(n log n)",
+      "static estimate": "O(n log n)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    },
+    {
+      "algorithm": "Heap sort (hand-written sift-down)",
+      "expected (worst case)": "O(n log n)",
+      "static estimate": "Unknown",
+      "verdict": "not estimated (Unknown)",
+      "reason when Unknown": "line 16: cost of sift_down() is unknown (line 2: while loop with a constant condition; iterations depend on when it breaks)"
+    },
+    {
+      "algorithm": "Maximum subarray (divide and conquer)",
+      "expected (worst case)": "O(n log n)",
+      "static estimate": "O(n log n)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    },
+    {
+      "algorithm": "Fast power (divide and conquer)",
+      "expected (worst case)": "O(log n)",
+      "static estimate": "O(log n)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    },
+    {
+      "algorithm": "Fibonacci (naive recursion)",
+      "expected (worst case)": "O(2^n)",
+      "static estimate": "O(2^n)",
+      "verdict": "matches",
+      "reason when Unknown": ""
+    }
+  ],
+  "analyzer_summary": {
+    "cases": 14,
+    "matches": 12,
+    "unknown": 2,
+    "different": 0
+  },
+  "final_model": {
+    "model": "Random Forest",
+    "feature_set": "patterns",
+    "n_features": 57,
+    "hyperparameters": {
+      "n_estimators": 300,
+      "max_features": "sqrt",
+      "min_samples_leaf": 3,
+      "class_weight": "balanced_subsample"
+    }
+  },
+  "notes": [
+    "Before = the previous release's configuration re-fitted with the same seed on the same rows; its test macro F1 reproduces the recorded value.",
+    "The test set was used once for the final model; feature and model choices were made by cross-validation.",
+    "The 95% confidence intervals of the before and after test macro F1 overlap (see the evaluation report), so the test-set change alone is not statistically conclusive; the cross-validated gain is the main evidence.",
+    "Static analyzer: Unknown means the pattern is not supported; it is never counted as correct."
+  ]
+}

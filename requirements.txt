@@ -19,6 +19,9 @@ pytest>=8.3,<9.0
 # Notebooks (lets VS Code run notebooks/*.ipynb with this environment)
 ipykernel>=6.29,<8.0
 
+# Optional: SHAP cross-check of the explanations (python -m src.explainability uses it when installed)
+# shap>=0.46
+
 # Optional - add only if benchmarks in Phase 3 show a real gain over
 # scikit-learn's GradientBoosting / HistGradientBoosting:
 # xgboost>=2.1,<3.0

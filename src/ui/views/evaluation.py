@@ -48,17 +48,21 @@ def render() -> None:
                  f"{meta.get('trained_on')} · scikit-learn {(meta.get('versions') or {}).get('scikit-learn')}")
         ui.muted("Scope: " + (meta.get("scope") or ""))
 
-    t1, t2, t3, t4, t5 = st.tabs(["Model comparison", "Confusion matrix & classes", "Generalization",
-                                  "Confidence", "Dataset"])
+    t1, t2, t3, t4, t5, t6, t7 = st.tabs(["Model comparison", "Confusion matrix & classes", "Feature importance",
+                                          "Confidence & calibration", "Generalization", "Improvement history", "Dataset"])
     with t1:
         _comparison(art, meta)
     with t2:
         _confusion(art, meta)
     with t3:
-        _generalization(ev)
+        _importance()
     with t4:
         _confidence(meta, ev)
     with t5:
+        _generalization(ev)
+    with t6:
+        _improvement(art)
+    with t7:
         _dataset(art)
 
 
@@ -78,13 +82,16 @@ def _comparison(art, meta) -> None:
     if _missing(art, "model_comparison", "Model comparison"):
         return
     df = logic.comparison_table(art.data["model_comparison"])
-    st.plotly_chart(charts.model_comparison(df, (meta or {}).get("selected_model")), **ui.STRETCH,
+    st.plotly_chart(charts.model_comparison(df, (meta or {}).get("selected_model"), (meta or {}).get("feature_set")), **ui.STRETCH,
                     config={"displayModeBar": False})
     st.dataframe(df, hide_index=True, **ui.STRETCH, column_config={
         c: st.column_config.NumberColumn(c, format="%.3f") for c in df.columns if df[c].dtype.kind == "f"})
-    ui.muted("Highlighted: the selected model. The intervals overlap heavily, so the top models are statistically "
-             "indistinguishable on this test set. Selection used repeated cross-validation: the Random Forest was within "
-             "the selection margin of the best score and is simpler than the voting ensemble, so it was kept.")
+    raw = art.data["model_comparison"]
+    if {"rcv_macro_f1", "key"} <= set(raw.columns) and len(raw):
+        top = raw.loc[raw["rcv_macro_f1"].idxmax()]
+        ui.muted(f"Highlighted: the selected model. Highest repeated-CV macro F1: {top['key']} ({top['rcv_macro_f1']:.3f}). "
+                 "Selection rule: the highest repeated-CV score, and within 0.005 of it the simplest model. The test "
+                 "intervals overlap heavily, so the top models are statistically indistinguishable on this test set.")
 
 
 def _confusion(art, meta) -> None:
@@ -159,7 +166,52 @@ def _generalization(ev) -> None:
                                           height=260), **ui.STRETCH, config={"displayModeBar": False})
 
 
+def _importance() -> None:
+    from src.ui.views.results import render_global_importance
+
+    render_global_importance()
+
+
+def _improvement(art) -> None:
+    ui.section("Final improvement phase: before vs after",
+               "Same 814 test programs, same grouped split. Features were chosen by cross-validation on the development "
+               "set; the test set was used once for the final model.")
+    if _missing(art, "improvement", "Improvement report"):
+        return
+    imp = art.data["improvement"]
+    ba = imp.get("before_after") or []
+    if ba:
+        st.dataframe(pd.DataFrame(ba), hide_index=True, **ui.STRETCH)
+    abl = imp.get("feature_ablation") or []
+    if abl:
+        ui.section("Feature ablation (repeated grouped CV on train + validation)",
+                   "Random Forest with the same hyperparameters; only the feature set changes.")
+        df = pd.DataFrame(abl)
+        st.plotly_chart(charts.simple_bar(df["feature_set"], df["rcv_macro_f1"], yaxis="Repeated-CV macro F1",
+                                          height=280), **ui.STRETCH, config={"displayModeBar": False})
+        st.dataframe(df, hide_index=True, **ui.STRETCH)
+    bench = imp.get("analyzer_benchmark") or []
+    if bench:
+        ui.section("Static analyzer on reference algorithms",
+                   "Expected values are standard worst-case results; Unknown is reported when a pattern is not supported.")
+        st.dataframe(pd.DataFrame(bench), hide_index=True, **ui.STRETCH)
+    for note in imp.get("notes") or []:
+        ui.muted("• " + note)
+
+
 def _confidence(meta, ev) -> None:
+    cal = (meta or {}).get("calibration_test")
+    if cal:
+        ui.section("Confidence score vs calibrated probability",
+                   "The app shows the forest's top vote share. These measurements, from the test set, show how far it is "
+                   "from a calibrated probability.")
+        ui.cards([
+            ui.card("Expected calibration error", ui.fmt(cal.get("ece_top_label"), 3), "0 = perfectly calibrated", accent=True),
+            ui.card("Mean top vote share", ui.fmt(cal.get("mean_top_vote_share"), 3), f"vs accuracy {ui.fmt(cal.get('accuracy'), 3)}"),
+            ui.card("Multiclass Brier score", ui.fmt(cal.get("brier_multiclass"), 3), "lower is better"),
+            ui.card("Log loss", ui.fmt(cal.get("log_loss"), 3), "lower is better"),
+        ])
+        ui.muted(cal.get("note", ""))
     ui.section("Is the vote share meaningful?", "Test accuracy for predictions grouped by the model's top vote share.")
     rel = (meta or {}).get("confidence_reliability_test")
     if not rel:

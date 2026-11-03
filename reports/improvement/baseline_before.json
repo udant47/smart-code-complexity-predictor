@@ -1,0 +1,118 @@
+{
+  "description": "Saved model before the final improvement phase (Phase 20 release). Copied from models/model_metadata.json of that release; not recomputed.",
+  "selected_model": "Random Forest",
+  "feature_set": "patterns",
+  "n_features": 57,
+  "hyperparameters": {
+    "n_estimators": 300,
+    "max_features": "sqrt",
+    "min_samples_leaf": 3,
+    "class_weight": "balanced_subsample"
+  },
+  "rcv_macro_f1": 0.5358,
+  "rcv_std": 0.0769,
+  "test_metrics": {
+    "accuracy": 0.4533,
+    "balanced_accuracy": 0.4424,
+    "macro_precision": 0.4797,
+    "macro_recall": 0.4424,
+    "macro_f1": 0.4422,
+    "weighted_f1": 0.4515,
+    "macro_f1_ci": [
+      0.3202,
+      0.5435
+    ]
+  },
+  "per_class_test": {
+    "O(1)": {
+      "precision": 0.505,
+      "recall": 0.394,
+      "f1": 0.443,
+      "support": 132
+    },
+    "O(log n)": {
+      "precision": 0.638,
+      "recall": 0.327,
+      "f1": 0.433,
+      "support": 113
+    },
+    "O(n)": {
+      "precision": 0.36,
+      "recall": 0.562,
+      "f1": 0.439,
+      "support": 128
+    },
+    "O(n log n)": {
+      "precision": 0.597,
+      "recall": 0.664,
+      "f1": 0.629,
+      "support": 143
+    },
+    "O(n^2)": {
+      "precision": 0.305,
+      "recall": 0.47,
+      "f1": 0.37,
+      "support": 100
+    },
+    "O(n^3)": {
+      "precision": 0.524,
+      "recall": 0.295,
+      "f1": 0.377,
+      "support": 112
+    },
+    "O(2^n)": {
+      "precision": 0.429,
+      "recall": 0.384,
+      "f1": 0.405,
+      "support": 86
+    }
+  },
+  "confidence_reliability_test": [
+    {
+      "from": 0.0,
+      "to": 0.4,
+      "n": 286,
+      "accuracy": 0.2483
+    },
+    {
+      "from": 0.4,
+      "to": 0.6,
+      "n": 281,
+      "accuracy": 0.3843
+    },
+    {
+      "from": 0.6,
+      "to": 0.8,
+      "n": 190,
+      "accuracy": 0.7579
+    },
+    {
+      "from": 0.8,
+      "to": 1.0,
+      "n": 57,
+      "accuracy": 0.807
+    }
+  ],
+  "generalization": {
+    "problem_grouped_oof": {
+      "n": 4458,
+      "accuracy": 0.5608,
+      "macro_f1": 0.5592,
+      "weighted_f1": 0.5625
+    },
+    "contest_grouped_oof": {
+      "n": 4458,
+      "accuracy": 0.5541,
+      "macro_f1": 0.5548,
+      "weighted_f1": 0.5572
+    }
+  },
+  "dataset_sha256": "50f6bdecedc7088db4108a88aea48b604a862798bc25fc4723652f05d39175d4",
+  "split_file_sha256": "a18fc1c0321c7137d3c33cb58936d7bc2cc0b72ec4acdf835b2ae2cd05b4b0d4",
+  "versions": {
+    "python": "3.11.18",
+    "scikit-learn": "1.7.2",
+    "pandas": "2.3.3",
+    "numpy": "2.4.6"
+  }
+}

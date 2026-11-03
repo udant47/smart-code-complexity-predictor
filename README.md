@@ -9,9 +9,10 @@ experimentally, for structural metrics only.
 ![Analyzer](screenshots/02_results_overview.png)
 
 > **Honest summary.** The rule-based analysis is deterministic and documented. The ML model reaches
-> **macro F1 0.442 (95% CI 0.3202–0.5435) and accuracy 0.453** on 814 programs from problems never seen in
-> training, over 7 classes. That is well above the baselines (macro F1 0.039–0.203), but roughly half of its
-> predictions are wrong. SmartCode shows this uncertainty in the app rather than hiding it.
+> **macro F1 0.460 (95% CI 0.336–0.558) and accuracy 0.469** on 814 programs from problems never seen in
+> training, over 7 classes (before the final improvement phase: 0.442 and 0.453). That is well above the
+> baselines (macro F1 0.039–0.203), but roughly half of its predictions are still wrong. SmartCode shows this
+> uncertainty in the app rather than hiding it. The full audit is in [docs/AUDIT.md](docs/AUDIT.md).
 
 ---
 
@@ -57,7 +58,17 @@ analysis is done by hand, and a structurally simple function (five lines of recu
 SmartCode measures the first precisely, estimates the second where the code allows, and reports a learned
 second opinion, while keeping these three answers separate and stating how reliable each one is.
 
-## 2. Motivation
+## 2. Motivation and objectives
+
+Objectives:
+
+1. Measure structural complexity exactly and per function, without executing code.
+2. Estimate worst-case time and auxiliary space with explicit rules, and say *Unknown* when the rules cannot decide.
+3. Train and honestly evaluate a classical ML classifier (no deep learning) for the time-complexity class.
+4. Explain every prediction and show how reliable it is.
+5. Present everything in a dashboard where each number comes from a saved result.
+
+Motivation:
 
 * Code review: point reviewers to functions that are hard to follow, with the evidence.
 * Learning: show *why* merge sort is O(n log n) and naive Fibonacci is exponential, step by step.
@@ -72,13 +83,13 @@ second opinion, while keeping these three answers separate and stating how relia
 | Structural metrics | 39 file-level metrics. Per function: lines, parameters, loops, conditionals, cyclomatic complexity, nesting, loop nesting, recursion, calls |
 | Structural category | Low / Medium / High from cyclomatic complexity (radon thresholds 1–5, 6–10, 11+) |
 | Derived Complexity Score | A 0–100 project-specific indicator built from 7 log-scaled metrics, with a percentile among 3,910 reference functions |
-| Static Big-O | Rule-based time and auxiliary-space estimates per function, with assumptions, evidence, confidence, and *Unknown* when the rules cannot decide |
+| Static Big-O | Rule-based time and auxiliary-space estimates per function **and for module-level scripts**, with assumptions, evidence, confidence, and *Unknown* when the rules cannot decide |
 | ML prediction | 7-class time-complexity class (O(1) … O(2ⁿ)) for the whole file, plus experimental per-function predictions |
-| Explainability | Global permutation importance, grouped importance, and per-prediction tree-path contributions |
+| Explainability | Global permutation importance, grouped importance, per-prediction tree-path contributions, and measured calibration (ECE, Brier) of the confidence score |
 | Refactoring guidance | 6 deterministic rules with evidence, severity and a suggested review action |
 | Examples | 8 documented Python examples plus 7 C versions, with expected values checked by tests |
 | Before/after comparison | Measured differences only. It flags *shorter but slower* changes and never calls a change an improvement |
-| Model evaluation page | Saved results: model comparison, confusion matrix, generalization, confidence, dataset |
+| Model evaluation page | Saved results: model comparison, confusion matrix and per-class scores, feature importance, confidence and calibration, generalization, improvement history (before/after), dataset |
 | Languages | Python: full analysis. **C: experimental, structural metrics only.** C++, Java and JavaScript: not supported |
 | Repository analysis | `python -m src.repository FOLDER`: read-only summary of a local folder, with size, time, symlink and secret protections |
 | Security | No code execution (proven by tests), model integrity hashes, input limits, HTML escaping, localhost binding |
@@ -95,6 +106,7 @@ second opinion, while keeping these three answers separate and stating how relia
         │                                              │
         ├─ feature_extractor   39 structural features  └─► common schema (languages/base)
         ├─ pattern_features    18 algorithm patterns          ▲
+        ├─ analysis_features   static-estimate features       │
         ├─ function_analyzer   per-function metrics           │
         ├─ algorithm_analyzer  rule-based Big-O (asymptotics) │  repository/ (scanner, secrets,
         ├─ complexity_score    Derived Complexity Score       │   analyzer) uses only this layer
@@ -103,7 +115,12 @@ second opinion, while keeping these three answers separate and stating how relia
                     └─ explainability (permutation, tree-path)
 
   Offline pipeline: dataset_loader → eda → preprocessing → train_model → tune_model → evaluate_model → explainability
+                    → improvement_report, dataset_audit (reports only)
 ```
+
+**Workflow of one analysis:** source text → size checks → `ast` parse → structural and pattern features → static
+Big-O per function and for the script → `program_features()` (the same function the dataset builder uses) → the
+model's columns in training order → vote shares → explanation, recommendations → dashboard.
 
 * `predictor.predict()` is the single entry point the UI uses for Python. It returns a JSON-serialisable result
   with metrics, static estimates, the ML class, explanations and recommendations.
@@ -117,7 +134,7 @@ second opinion, while keeping these three answers separate and stating how relia
 | Analysis | `ast`, `tokenize` (standard library); `tree-sitter` 0.25.2 + `tree-sitter-c` 0.24.1 for C |
 | ML | scikit-learn (model trained with 1.7.2), pandas, NumPy, joblib |
 | UI | Streamlit (tested with 1.39 and 1.66), Plotly; Matplotlib for report figures |
-| Testing | pytest (940 tests), Streamlit `AppTest` for headless UI tests, Playwright for the screenshots |
+| Testing | pytest (994 tests), Streamlit `AppTest` for headless UI tests, Playwright for the screenshots |
 | Optional | SHAP (only for a cross-check of explanations; not required) |
 
 No deep learning frameworks and no LLM APIs are used.
@@ -160,7 +177,16 @@ A function's own metrics exclude the bodies of functions nested inside it; those
 * loops over `range` or collections, `while` loops with counters, halving and two pointers;
 * recursion, solved with recurrences or the master theorem;
 * built-in operations with documented costs, such as `sorted` (n log n), `in` on lists vs sets, and slicing;
-* calls to other functions in the same file.
+* calls to other functions in the same file;
+* loops guarded by a counter plus other conditions (`while j >= 0 and a[j] > key`, insertion sort): bounded by
+  the counter, a worst-case upper bound;
+* loops between `lo`, `mid` and `hi` in divide-and-conquer code (maximum subarray: O(n log n));
+* **module-level scripts** (`analyze_script`): code outside functions, with values read by `input()` treated as
+  the input size. Most competitive-programming solutions are written this way.
+
+On 14 reference algorithms (searching, 7 sorting variants, divide and conquer, recursion) the analyzer matches
+the textbook worst case on 12 and reports Unknown on 2 (quick sort, hand-written heap sift-down), with no wrong
+answers (`python -m src.improvement_report`).
 
 Results are worst case and use the function's own size variables (`n = len(items)`). Each result comes with
 assumptions, evidence lines and a confidence level.
@@ -201,7 +227,7 @@ O(n²) 615 (13.8%), O(n³) 540 (12.1%), O(2ⁿ) 481 (10.8%).
 
 ## 11. Feature engineering
 
-**57 features** (the "patterns" feature set):
+**61 features** (the "patterns_static" feature set; 57 before the final improvement phase):
 
 * **39 structural features:** lines, comments, functions, classes, `if`/`elif`/`else`, loops, `try`/`except`,
   comprehensions, operators by type, calls, identifiers, cyclomatic complexity, nesting, loop nesting,
@@ -209,18 +235,29 @@ O(n²) 615 (13.8%), O(n³) 540 (12.1%), O(2ⁿ) 481 (10.8%).
 * **18 algorithm-pattern features:** sorting and heap calls, halving loops, binary-search midpoints, constant-size
   loops, loops bounded by an outer loop variable, loop depth over input-sized ranges, exponential ranges,
   combinatorics, branching and dividing recursion, memoization, power-of-two expressions, and others.
+* **4 static-estimate features:** whether the rule-based analyzer produced a time estimate, and that estimate's
+  polynomial degree, power of log n and exponential flag. They let the model use the analyzer's reasoning.
+
+Feature selection was measured, not assumed (repeated grouped CV, Random Forest, same hyperparameters):
+57 features 0.5358 → +static estimate 0.5560 → +9 extra AST counts (assignments, subscripts, slices, membership
+tests, call depth, …) 0.5485 on their own and 0.5569 together with the static features. The extra AST counts add
+less than the 0.005 adoption margin, so they are computed and displayed but not used by the model.
+
+Training and inference build features with one shared function, `analysis_features.program_features()`, and a
+test checks that the dataset builder and the predictor produce identical values for the same program.
 
 Preprocessing lives inside scikit-learn pipelines, so nothing from validation or test data leaks into training.
 The saved metadata pins the exact feature order, which is checked at load time.
 
 ## 12. ML algorithms compared
 
-Ten kinds of model, each on the 39 structural features ("all") and the 57-feature "patterns" set where applicable:
+Eleven kinds of model, each on the 39 structural features ("all"), the 57-feature "patterns" set and the
+61-feature "patterns_static" set where applicable (27 candidates):
 
 * most-frequent and stratified dummy baselines;
 * a hand-written loop-nesting rule;
 * Logistic Regression, SVM (RBF kernel) and Decision Tree;
-* Random Forest, Gradient Boosting and Histogram Gradient Boosting;
+* Random Forest, **Extra Trees**, Gradient Boosting and Histogram Gradient Boosting;
 * a soft-voting ensemble (LR + RF + HGB).
 
 Hyperparameters were chosen by grouped cross-validation on the training data. Models were compared by
@@ -236,62 +273,86 @@ for the final report.
 * **Confusion matrix and per-class scores**, plus **error distance** (how many classes away an error is).
 * **Confidence reliability**: how often predictions at each vote-share level were correct on the test set. The
   app shows this next to every prediction, because forest vote shares are not calibrated probabilities.
+* **Calibration**: expected calibration error (ECE, 10 bins), multiclass Brier score and log loss on the test set.
 
 ## 14. Model comparison results
 
 Test set: 814 programs from problems unseen in training (grouped split: 2,914 train / 730 validation / 814 test).
-All values below are copied from `reports/models/model_comparison.csv` and `models/model_metadata.json`.
+All values below come from `reports/models/model_comparison.csv` and `models/model_metadata.json`.
 
 | Model | Features | Repeated CV macro F1 | Test macro F1 [95% CI] | Test accuracy |
 |---|---|---|---|---|
 | Dummy (most frequent) | all | 0.0458 | 0.0388 [0.0219–0.0617] | 0.1572 |
 | Dummy (stratified) | all | 0.1381 | 0.1538 [0.1183–0.1637] | 0.1560 |
 | Loop-nesting rule | all | 0.2655 | 0.2032 [0.1170–0.2908] | 0.2690 |
-| Logistic Regression | patterns | 0.5008 | 0.4418 [0.3247–0.5235] | 0.4533 |
-| SVM (RBF) | patterns | 0.5202 | 0.4365 [0.3209–0.5245] | 0.4509 |
-| Decision Tree | patterns | 0.4776 | 0.4384 [0.3042–0.5423] | 0.4472 |
-| **Random Forest (selected)** | patterns | **0.5358** | **0.4422 [0.3202–0.5435]** | **0.4533** |
-| Gradient Boosting | patterns | 0.5236 | 0.4347 [0.3139–0.5536] | 0.4472 |
-| Hist Gradient Boosting | patterns | 0.5280 | 0.4375 [0.3163–0.5482] | 0.4533 |
-| Soft-voting ensemble | patterns | 0.5383 | 0.4591 [0.3363–0.5597] | 0.4730 |
+| Logistic Regression | patterns_static | 0.5141 | 0.4550 [0.3367–0.5413] | 0.4681 |
+| SVM (RBF) | patterns_static | 0.5265 | 0.4518 [0.3251–0.5459] | 0.4631 |
+| Decision Tree | patterns_static | 0.4832 | 0.4194 [0.2896–0.5143] | 0.4349 |
+| **Random Forest (selected)** | patterns_static | **0.5560** | **0.4604 [0.3360–0.5579]** | **0.4693** |
+| Extra Trees | patterns_static | 0.5514 | 0.4943 [0.3518–0.5925] | 0.5037 |
+| Gradient Boosting | patterns_static | 0.5411 | 0.4458 [0.3303–0.5630] | 0.4681 |
+| Hist Gradient Boosting | patterns_static | 0.5484 | 0.4391 [0.3216–0.5473] | 0.4619 |
+| Soft-voting ensemble | patterns_static | 0.5595 | 0.4682 [0.3419–0.5647] | 0.4853 |
+| Random Forest | patterns (57, previous) | 0.5358 | 0.4422 [0.3202–0.5435] | 0.4533 |
 | Random Forest | all (39 structural only) | 0.4243 | 0.3612 [0.2573–0.4632] | 0.3550 |
 
-* **Why Random Forest:** the ensemble's cross-validation score (0.5383) was within the selection tolerance of the
-  Random Forest's (0.5358), so the simpler model was kept. The ensemble scored higher on the test set (0.459 vs
-  0.442), but the test set was not used for selection, and the intervals overlap almost completely.
-* **Pattern features matter:** every model improved when the 18 algorithm-pattern features were added. Random
-  Forest test macro F1 went from 0.361 to 0.442.
-* **Tuning:** a further tuning round improved cross-validation by only 0.004, below the 0.005 adoption margin,
-  so it was not adopted. For transparency: the tuned configuration would have scored 0.4615 on the test set.
+* **Why Random Forest:** the ensemble's cross-validation score (0.5595) was within the 0.005 selection tolerance
+  of the Random Forest's (0.5560), so the simpler model was kept.
+* **Why not Extra Trees,** although it has the best test score: its cross-validation score is lower, and choosing a
+  model because of its test score would turn the test set into a selection set. The result is reported, not used.
+* **Features matter more than the algorithm:** every model improved with the 18 pattern features, and again with
+  the 4 static-estimate features. The top models are within each other's confidence intervals.
+* **Tuning:** RandomizedSearchCV (30 configurations per feature set) improved cross-validation by only 0.003,
+  below the 0.005 adoption margin, so the default configuration was kept.
 
 **Final model** (Random Forest, 300 trees, `max_features="sqrt"`, `min_samples_leaf=3`,
-`class_weight="balanced_subsample"`, trained on 3,644 rows):
+`class_weight="balanced_subsample"`, 61 features, trained on 3,644 rows):
 
 | Accuracy | Balanced accuracy | Macro precision | Macro recall | **Macro F1** | Weighted F1 |
 |---|---|---|---|---|---|
-| 0.4533 | 0.4424 | 0.4797 | 0.4424 | **0.4422** (95% CI 0.3202–0.5435) | 0.4515 |
+| 0.4693 | 0.4597 | 0.5016 | 0.4597 | **0.4604** (95% CI 0.3360–0.5579) | 0.4681 |
 
 | Class | O(1) | O(log n) | O(n) | O(n log n) | O(n²) | O(n³) | O(2ⁿ) |
 |---|---|---|---|---|---|---|---|
-| F1 | 0.443 | 0.433 | 0.439 | 0.629 | 0.370 | 0.377 | 0.405 |
+| F1 | 0.453 | 0.474 | 0.438 | 0.620 | 0.422 | 0.405 | 0.410 |
 | Test programs | 132 | 113 | 128 | 143 | 100 | 112 | 86 |
 
-* **Errors:** 45.3% correct, 20.4% off by one class, 34.3% off by two or more.
-* **Confidence:** predictions with vote share 0.8–1.0 were correct 80.7% of the time (57 programs), 0.6–0.8 75.8%
-  (190), 0.4–0.6 38.4% (281), and below 0.4 24.8% (286).
+* **Errors:** 46.9% correct, 18.7% off by one class, 34.4% off by two or more.
+* **Confidence:** predictions with vote share 0.8–1.0 were correct 86.5% of the time (74 programs), 0.6–0.8 71.7%
+  (187), 0.4–0.6 35.1% (262), and below 0.4 31.6% (291).
+* **Calibration:** ECE 0.074, multiclass Brier 0.661, log loss 1.450; mean top vote share 0.513 vs accuracy 0.469.
+  Vote shares are therefore shown as *confidence scores*, never as probabilities.
+
+### 14a. Before and after the final improvement phase
+
+Same dataset rows, same split file (identical SHA-256), same 814 test programs. The "before" model was re-fitted
+with the same seed and reproduces its recorded score exactly (`python -m src.improvement_report`).
+
+| Metric | Before (57 features) | After (61 features) | Change |
+|---|---:|---:|---:|
+| Test accuracy | 0.4533 | 0.4693 | +0.016 |
+| Test macro F1 | 0.4422 | 0.4604 | +0.018 |
+| Test weighted F1 | 0.4515 | 0.4681 | +0.017 |
+| Repeated grouped CV macro F1 | 0.5358 | 0.5560 | +0.020 |
+| Out-of-fold macro F1 (all programs, grouped by problem) | 0.5592 | 0.5713 | +0.012 |
+| Expected calibration error (lower is better) | 0.0819 | 0.0739 | −0.008 |
+| Static analyzer: reference algorithms matched | 10 of 14 | 12 of 14 | +2 (insertion sort, D&C max subarray) |
+
+The gain is real but modest, and the test intervals overlap, so the cross-validated gain is the main evidence.
+Details: [docs/AUDIT.md](docs/AUDIT.md).
 
 ## 15. Generalization experiments
 
 | Experiment | Result |
 |---|---|
-| Out-of-fold, grouped by **problem** (all 4,458 programs) | accuracy 0.5608, macro F1 0.5592 |
-| Out-of-fold, grouped by **contest** (stricter) | accuracy 0.5541, macro F1 0.5548 |
-| **Algorithm family held out** of training (12 Codeforces tags) | mean macro F1 change −0.032. Largest drops: dp 0.497 → 0.383, binary search 0.539 → 0.479, bitmasks 0.172 → 0.106 |
-| Different implementations of the same unseen problem | mean per-problem accuracy 0.500 |
+| Out-of-fold, grouped by **problem** (all 4,458 programs) | accuracy 0.5727, macro F1 0.5713 |
+| Out-of-fold, grouped by **contest** (stricter) | accuracy 0.5664, macro F1 0.5661 |
+| **Algorithm family held out** of training (12 Codeforces tags) | mean macro F1 change −0.032. Largest drops: dp 0.504 → 0.385, binary search 0.536 → 0.501, bitmasks 0.179 → 0.104 |
+| Different implementations of the same unseen problem | mean per-problem accuracy 0.521 |
 | **Leakage check**: random vs grouped split | a 1-nearest-neighbour probe scores 57.2% on a random split and 34.6% on a grouped split. Random splits inflate scores by about 22.6 points because solutions to the same problem land in both train and test |
-| **External: BigO(Bench)** (different source, runtime-measured labels) | 521 programs from problems not in CodeComplex: accuracy 0.772, macro F1 0.458. *Measured on the development machine with the optional BigO(Bench) file downloaded. It is not part of the default pipeline, so a fresh clone shows "not evaluated" (screenshot 9).* |
+| **External: BigO(Bench)** (different source, runtime-measured labels) | Previous 57-feature model, measured once on the development machine with the optional file downloaded: 521 programs from problems not in CodeComplex, accuracy 0.772, macro F1 0.458. *Not re-run for the 61-feature model (the file is not part of the default pipeline), so the app shows "not evaluated".* |
 
-The out-of-fold macro F1 (0.559) is higher than the single test split (0.442). The test split has only about 50
+The out-of-fold macro F1 (0.571) is higher than the single test split (0.460). The test split has only about 50
 problems, so its interval is wide. Both numbers are reported.
 
 To reproduce the external evaluation, place `time_complexity_test_set.jsonl` from the BigO(Bench) dataset in
@@ -300,15 +361,19 @@ To reproduce the external evaluation, place `time_complexity_test_set.jsonl` fro
 ## 16. Explainability
 
 * **Global:** permutation importance on the held-out test set (10 repeats).
-  * Top features (drop in macro F1 when shuffled): `sort_call_count` 0.093, `power_of_two_expr_count` 0.025 and
-    `halving_loop_count` 0.022.
-  * Grouped importance: loops 0.185, library calls/data structures 0.105, exponential patterns 0.054, halving
-    0.029. Branching, size, nesting and operator features showed no measurable benefit on unseen problems.
+  * Top features (drop in macro F1 when shuffled): `sort_call_count` 0.079, `halving_loop_count` 0.022,
+    `power_of_two_expr_count` 0.012, `max_input_loop_depth` 0.011 and `static_time_degree` 0.008.
+  * Grouped importance: loops 0.192, library calls/data structures 0.085, exponential patterns 0.050, halving
+    0.025, static estimate 0.010. Size, nesting and operator features showed no measurable benefit on unseen
+    problems.
+  * Shown on the *Model evaluation → Feature importance* tab and after every analysis.
 * **Per prediction:** tree-path contributions, an exact additive decomposition of the forest's vote, show which
   features moved this prediction and by how much.
 * **Caveats:** importance is association, not causation, and the global ranking is not the reason for any
   single prediction. SHAP is supported as an optional cross-check: its top-5 features agree with the tree-path
-  method on 4.0 of 5 features on average.
+  method on 3.9 of 5 features on average.
+* **Confidence vs probability:** the vote share is labelled a confidence score. Its measured calibration (ECE
+  0.074) and the accuracy at each vote-share level are shown beside it (*Confidence & calibration* tab).
 
 ## 17. Refactoring recommendations
 
@@ -362,6 +427,8 @@ python -m src.train_model            # compare all models (reports/models)
 python -m src.tune_model             # tuning round
 python -m src.evaluate_model         # final model, evaluation report, saves models/
 python -m src.explainability         # global explanations (models/explainability.json)
+python -m src.improvement_report     # before/after, feature ablation, analyzer benchmark (reports/improvement)
+python -m src.dataset_audit          # dataset quality audit (reports/improvement)
 python -m src.model_integrity verify # should print OK twice
 ```
 
@@ -395,6 +462,8 @@ BigO(Bench) file (see screenshot 9).
 | ![ML](screenshots/05_ml_explainability.png) **5. ML prediction**: vote shares, measured accuracy at this confidence, explanation | ![Refactoring](screenshots/06_refactoring.png) **6. Refactoring guidance** with evidence |
 | ![Compare](screenshots/07_compare.png) **7. Compare versions**: shorter code with a higher time estimate | ![Evaluation](screenshots/08_model_evaluation.png) **8. Model comparison** with confidence intervals |
 | ![Generalization](screenshots/09_generalization.png) **9. Generalization experiments** | ![C](screenshots/10_c_analysis.png) **10. Experimental C analysis** (structural only) |
+| ![Improvement](screenshots/11_improvement_history.png) **11. Improvement history**: before/after on the same test set, feature ablation | ![Calibration](screenshots/12_calibration.png) **12. Confidence vs calibrated probability**: ECE, Brier, accuracy per vote-share level |
+| ![Importance](screenshots/13_feature_importance.png) **13. Global feature importance** on the evaluation page | |
 
 ## 21. Project structure
 
@@ -405,32 +474,35 @@ smart-code-complexity-predictor/
 ├── pyproject.toml              pytest configuration
 ├── README.md · SECURITY.md · TESTING.md
 ├── .streamlit/config.toml      dark theme, no error details, localhost only
+├── docs/AUDIT.md               final audit: findings, changes, before/after, limitations
 ├── docs/EXTENSIBILITY.md       languages, C parser choice, repository analysis design
 ├── notebooks/01_exploratory_data_analysis.ipynb
 ├── screenshots/                README screenshots
 ├── data/raw/ · data/processed/ downloaded and built locally (git-ignored)
 ├── models/                     trained model, metadata, explanations (git-ignored, rebuilt)
-├── reports/                    eda/ · preprocessing/ · models/ · evaluation/ · explainability/
+├── reports/                    eda/ · preprocessing/ · models/ · evaluation/ · explainability/ · improvement/
 ├── src/
 │   ├── config.py               paths and limits
 │   ├── code_parser.py          safe parsing (ast, tokenize), limits, errors
 │   ├── feature_extractor.py    39 structural features, file and function level
 │   ├── pattern_features.py     18 algorithm-pattern features
+│   ├── analysis_features.py    static-estimate + extra AST features; program_features() for training and inference
 │   ├── function_analyzer.py    per-function metrics
 │   ├── asymptotics.py          symbolic cost algebra
-│   ├── algorithm_analyzer.py   rule-based Big-O
+│   ├── algorithm_analyzer.py   rule-based Big-O (functions and scripts)
 │   ├── complexity_score.py     Derived Complexity Score
 │   ├── suggestions.py          refactoring rules
 │   ├── dataset_loader.py · eda.py · preprocessing.py
 │   ├── train_model.py · tune_model.py · evaluate_model.py
 │   ├── explainability.py       permutation and tree-path explanations
+│   ├── dataset_audit.py · improvement_report.py   reproducible audit and before/after reports
 │   ├── model_integrity.py      SHA-256 verification before unpickling
 │   ├── predictor.py            single entry point used by the UI
 │   ├── examples.py · comparison.py   documented examples, before/after comparison
 │   ├── languages/              common schema, registry, Python adapter, C analyzer (tree-sitter)
 │   ├── repository/             safe folder scan, secret detection, summary, CLI
 │   └── ui/                     components, styles, charts, services, views/
-└── tests/                      24 test files, 940 tests (+ conftest.py)
+└── tests/                      25 test files, 994 tests (+ conftest.py)
 ```
 
 ## 22. Testing
@@ -439,25 +511,30 @@ smart-code-complexity-predictor/
 python -m pytest
 ```
 
-* 940 tests cover the parser, features, Big-O rules, ML pipeline, model loading and integrity, explainability,
+* 994 tests cover the parser, features, Big-O rules, ML pipeline, model loading and integrity, explainability,
   recommendations, examples, comparison, the Streamlit pages (headless), languages, repository analysis,
-  security and robustness. Line coverage is 92% of `src/` and `app.py`, measured with `pytest-cov` (not a
+  security, robustness, script analysis, sorting algorithms, calibration and training/inference feature equality.
+  Line coverage is 91% of `src/` and `app.py`, measured with `pytest-cov` (not a
   project requirement).
-* Expected result on Windows: **936 passed, 4 skipped**. The skips are the SHAP cross-check when SHAP is not
+* Expected result on Windows: **990 passed, 4 skipped**. The skips are the SHAP cross-check when SHAP is not
   installed, two symlink tests (Windows only allows symlinks with Developer Mode on), and one POSIX-only
   named-pipe test.
 * [TESTING.md](TESTING.md) maps tests to requirements and gives a 17-step manual test checklist.
 
 ## 23. Limitations
 
-* **ML accuracy is modest:** macro F1 0.442 on unseen problems, with a wide interval (0.3202–0.5435). Treat the
-  class as a second opinion. The app shows the measured accuracy at each confidence level.
+* **ML accuracy is modest:** macro F1 0.460 on unseen problems, with a wide interval (0.336–0.558); about half of
+  the predictions are wrong. Treat the class as a second opinion. The app shows the measured accuracy at each
+  confidence level, and the vote shares are not calibrated probabilities (ECE 0.074).
+* **More data, not more model:** the learning curve still rises with more training *problems*, and 95.6% of
+  programs share their problem's majority label, so generalising to new problems is the bottleneck.
 * **Domain:** trained on short competitive-programming solutions from one source (Codeforces). It has not been
   validated on application code, on single functions (per-function predictions are experimental), or for space
   complexity.
 * **Labels:** expert labels are imperfect, and static features cannot see data-dependent loop bounds.
 * **Static Big-O** covers common patterns only. Everything else is reported as Unknown, and estimates are worst
-  case.
+  case. Quick sort (data-dependent partitions), `while True` loops such as a hand-written heap sift-down, and
+  amortised costs stay Unknown. The analyzer never claims exact Big-O for arbitrary programs.
 * **Structural metrics** describe control flow and size, not naming, cohesion, coupling, tests or documentation.
 * **C** is experimental and structural only. The preprocessor is not run, and code that relies on
   syntax-changing macros is refused. **C++, Java and JavaScript are not supported.**

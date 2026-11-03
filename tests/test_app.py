@@ -445,3 +445,26 @@ def test_c_unavailable_is_disabled(monkeypatch):
     no_crash(at)
     assert next(b for b in at.button if b.label == "Analyze").disabled
     assert "C is not supported" in page_text(at) and "Not available on this computer" in page_text(at)
+
+
+def test_evaluation_page_has_importance_calibration_and_improvement_tabs():
+    at = AppTest.from_file(APP, default_timeout=TIMEOUT)
+    at.run()
+    at.sidebar.radio(key="nav").set_value("Model evaluation").run()
+    no_crash(at)
+    labels = [t.label for t in at.tabs]
+    for name in ("Feature importance", "Confidence & calibration", "Improvement history"):
+        assert name in labels
+    text = page_text(at)
+    if logic.ARTIFACTS["model_metadata"].exists() and "calibration_test" in logic.ARTIFACTS["model_metadata"].read_text():
+        assert "Expected calibration error" in text
+
+
+def test_script_estimate_and_measures_guide_are_shown():
+    at = analyze("n = int(input())\na = list(map(int, input().split()))\nfor x in a:\n    for y in a:\n        print(x + y)\n")
+    no_crash(at)
+    labels = [e.label for e in at.expander]
+    assert "What is the difference between these measures?" in labels
+    script = [lab for lab in labels if lab.startswith("Module-level code (script)")]
+    assert script and "time O(n^2)" in script[0]
+    assert "Auxiliary space (static estimate)" in page_text(at)

@@ -567,6 +567,9 @@ class _FunctionAnalyzer:
             start, stop = args[0], args[1]
         if step_negative:
             start, stop = stop, start  # range(n, 0, -1): the size comes from the start
+        interval = self._interval_range(start, stop)
+        if interval is not None:  # e.g. range(mid + 1, hi) inside a divide-and-conquer on [lo, hi]
+            return interval, ast.unparse(call)
         size = self.size_of(stop)
         if size is None:
             return None, f"range bound {ast.unparse(stop)} is not statically known"
@@ -580,6 +583,26 @@ class _FunctionAnalyzer:
                     "medium",
                 )
         return size, ast.unparse(call)
+
+    def _interval_range(self, start: Optional[ast.AST], stop: Optional[ast.AST]) -> Optional[Mono]:
+        """hi - lo if both ends are lo, hi or mid = (lo + hi) // 2 (each +/- a constant), lo and hi parameters.
+
+        A range between two points of [lo, hi] has at most hi - lo + c items, so this is a safe upper bound.
+        Only used when one end is the midpoint, so plain range(lo, hi) keeps its earlier treatment.
+        """
+        names = set()
+        for e in (start, stop):
+            if e is None:
+                return None
+            if isinstance(e, ast.BinOp) and isinstance(e.op, (ast.Add, ast.Sub)) and _const_int(e.right) is not None:
+                e = e.left
+            if not isinstance(e, ast.Name):
+                return None
+            names.add(e.id)
+        for mid, (lo, hi) in self.mids.items():
+            if mid in names and names <= {lo, hi, mid} and lo in self.params and hi in self.params:
+                return self._interval_sym(lo, hi)
+        return None
 
     def _iter_bound(self, it: ast.AST, register: bool = True) -> Optional[Mono]:
         if isinstance(it, ast.Call) and _call_name(it) == "range":
@@ -813,6 +836,17 @@ class _FunctionAnalyzer:
                     if any(sz is None for sz in sizes):
                         return None, "two-pointer loop with unknown bounds"
                     return Cost.of(*sizes), "each iteration advances one of " + ", ".join(vars_)
+
+        # Guarded counter: while j >= 0 and a[j] > key (insertion sort). The counter condition alone bounds the
+        # loop; the other conditions can only end it earlier, so the bound is a worst-case upper bound.
+        if isinstance(test, ast.BoolOp) and isinstance(test.op, ast.And):
+            for v in test.values:
+                if _counter_compare(v) is None:
+                    continue
+                sub = ast.copy_location(ast.While(test=v, body=s.body, orelse=[]), s)
+                bound, desc = self._while_bound(sub)
+                if bound is not None:
+                    return bound, f"{desc}; the other conditions can only stop it earlier (worst-case bound)"
 
         # Single counter
         comp = _counter_compare(test)
@@ -1826,3 +1860,156 @@ def _to_estimate(res: _FnResult, function_id: str) -> ComplexityEstimate:
         size_variables={names[s]: res.sym_desc[s] for s in order},
         recurrence=res.recurrence,
     )
+
+
+# --------------------------------------------------------------------------- #
+# Module-level scripts (competitive-programming style code with no functions)
+# --------------------------------------------------------------------------- #
+SCRIPT_ID = "<module>"
+_SCRIPT_LINE = 10 ** 9  # synthetic line key; real code never reaches it
+_STDIN_ATTRS = {"readline", "read", "readlines", "buffer"}
+
+
+def _input_aliases(statements: list) -> set[str]:
+    """Names bound to an input reader, e.g. ``input = sys.stdin.readline`` or ``r = lambda: ...readline()``."""
+    names = {"input"}
+    for st in statements:
+        if isinstance(st, ast.Assign) and len(st.targets) == 1 and isinstance(st.targets[0], ast.Name):
+            v = st.value
+            if isinstance(v, ast.Lambda):
+                v = v.body
+            if any(isinstance(n, ast.Attribute) and n.attr in _STDIN_ATTRS for n in ast.walk(v)):
+                names.add(st.targets[0].id)
+    return names
+
+
+def _is_input_call(node: ast.AST, aliases: set[str]) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    f = node.func
+    if isinstance(f, ast.Name):
+        return f.id in aliases
+    if isinstance(f, ast.Attribute) and f.attr in _STDIN_ATTRS:
+        return True
+    return False
+
+
+class _ScriptInputs(ast.NodeTransformer):
+    """Turn values read from standard input into size parameters of a synthetic function.
+
+    ``n = int(input())`` and ``a = list(map(int, input().split()))`` make ``n`` and ``a`` parameters (the
+    statement is dropped); ``a = sorted(map(int, input().split()))`` keeps its sorting cost as ``a = sorted(a)``.
+    An input read used directly inside an expression (``range(int(input()))``) becomes a fresh parameter.
+    """
+
+    def __init__(self, aliases: set[str]):
+        self.aliases = aliases
+        self.params: list[str] = []
+
+    def _add(self, name: str) -> None:
+        if name not in self.params:
+            self.params.append(name)
+
+    def _reads_input(self, node: ast.AST) -> bool:
+        return any(_is_input_call(n, self.aliases) for n in ast.walk(node))
+
+    def _targets(self, targets) -> list[str]:
+        out = []
+        for t in targets:
+            for n in ast.walk(t):
+                if isinstance(n, ast.Name):
+                    out.append(n.id)
+        return out
+
+    def visit_FunctionDef(self, node):  # function bodies are analysed on their own
+        return node
+
+    visit_AsyncFunctionDef = visit_FunctionDef
+    visit_ClassDef = visit_FunctionDef
+    visit_Lambda = visit_FunctionDef
+
+    def visit_Assign(self, node):
+        if node.value is not None and self._reads_input(node.value):
+            names = self._targets(node.targets)
+            if not names:
+                return ast.copy_location(ast.Pass(), node)
+            for n in names:
+                self._add(n)
+            sorts = any(isinstance(c, ast.Call) and isinstance(c.func, ast.Name) and c.func.id == "sorted"
+                        for c in ast.walk(node.value))
+            if sorts and len(names) == 1:
+                new = ast.Assign(targets=[ast.Name(id=names[0], ctx=ast.Store())],
+                                 value=ast.Call(func=ast.Name(id="sorted", ctx=ast.Load()),
+                                                args=[ast.Name(id=names[0], ctx=ast.Load())], keywords=[]))
+                return ast.fix_missing_locations(ast.copy_location(new, node))
+            return ast.copy_location(ast.Pass(), node)
+        return self.generic_visit(node)
+
+    def visit_AnnAssign(self, node):
+        if node.value is not None and self._reads_input(node.value):
+            for n in self._targets([node.target]):
+                self._add(n)
+            return ast.copy_location(ast.Pass(), node)
+        return self.generic_visit(node)
+
+    def visit_Expr(self, node):
+        if self._reads_input(node.value) and isinstance(node.value, ast.Call) and _is_input_call(node.value, self.aliases):
+            return ast.copy_location(ast.Pass(), node)  # a line read and discarded
+        return self.generic_visit(node)
+
+    def visit_Call(self, node):
+        # int(input()) / input() used inside an expression -> a fresh size parameter
+        inner = node.args[0] if (isinstance(node.func, ast.Name) and node.func.id in ("int", "float") and node.args) else None
+        if _is_input_call(node, self.aliases) or (inner is not None and _is_input_call(inner, self.aliases)):
+            name = f"input_{len(self.params) + 1}"
+            self._add(name)
+            return ast.copy_location(ast.Name(id=name, ctx=ast.Load()), node)
+        return self.generic_visit(node)
+
+
+def analyze_script(source: Union[str, ParseResult]) -> Optional[ComplexityEstimate]:
+    """Estimate the module-level code of a script as one unit, or None if the file has no such code.
+
+    Values read from standard input are the input sizes; calls to functions defined in the file are
+    costed by the per-function analysis. The same limits apply: anything outside the supported
+    patterns is reported as Unknown, never guessed.
+    """
+    parsed = source if isinstance(source, ParseResult) else parse_source(source)
+    if not parsed.success:
+        return None
+    body = [s for s in parsed.tree.body
+            if not isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Import, ast.ImportFrom))]
+    body = [s for s in body if not (isinstance(s, ast.Expr) and isinstance(s.value, ast.Constant))]  # docstrings
+    if not body:
+        return None
+    import copy
+
+    rewriter = _ScriptInputs(_input_aliases(parsed.tree.body))
+    try:
+        new_body = [rewriter.visit(copy.deepcopy(s)) for s in body]
+    except RecursionError:  # pathologically deep expressions: report Unknown, never guess
+        new_body, rewriter.params = [ast.Pass()], []
+        too_deep = True
+    else:
+        too_deep = False
+    args = ast.arguments(posonlyargs=[], args=[ast.arg(arg=p) for p in rewriter.params], vararg=None,
+                         kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[])
+    fields = dict(name=SCRIPT_ID, args=args, body=new_body, decorator_list=[], returns=None, type_comment=None)
+    if "type_params" in ast.FunctionDef._fields:
+        fields["type_params"] = []
+    node = ast.FunctionDef(**fields)
+    first, last = body[0], body[-1]
+    node.lineno, node.col_offset = _SCRIPT_LINE, 0
+    node.end_lineno, node.end_col_offset = _SCRIPT_LINE, 0
+    ast.fix_missing_locations(node)
+    info = FunctionInfo(name=SCRIPT_ID, qualname=SCRIPT_ID, kind="function", is_async=False, lineno=_SCRIPT_LINE,
+                        end_lineno=_SCRIPT_LINE, col=0, end_col=0, depth=0, parent=None, class_name=None,
+                        decorators=(), parameters=tuple(rewriter.params), source="")
+    module = _Module(parsed)
+    module.nodes[_SCRIPT_LINE] = node
+    module.info_by_line[_SCRIPT_LINE] = info
+    if too_deep:
+        reason = ["internal analysis limitation (RecursionError): module-level code is nested too deeply"]
+        module.cache[_SCRIPT_LINE] = _FnResult(info, Cost.unknown(), Cost.unknown(), reason, list(reason),
+                                               [], [], {}, [], None, {})
+    return module.estimate(info, SCRIPT_ID)

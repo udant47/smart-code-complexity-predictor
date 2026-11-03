@@ -4,7 +4,8 @@ What this module explains
 -------------------------
 The saved model (``models/complexity_model.joblib``) is a scikit-learn
 Pipeline: median imputation, then a ``RandomForestClassifier`` (300 trees)
-over 57 static features (39 structural + 18 algorithm-pattern features). It
+over the static features listed in ``models/model_metadata.json`` (structural, algorithm-pattern and,
+since the final improvement phase, the static analyzer's own estimate). It
 predicts one of seven time-complexity classes for a whole program. Everything
 here explains **that model's behaviour**. It does not explain why code has a
 given complexity, and it does not make the model more accurate (test macro F1
@@ -38,7 +39,7 @@ Techniques and why they were chosen
      consistency guarantees of SHAP values.
    * ``shap`` (optional): exact TreeSHAP (path-dependent) via the ``shap``
      package, only if it is installed. SHAP is suitable for this model
-     (tree ensemble, 57 features, one program at a time is milliseconds), but
+     (tree ensemble, about 60 features, one program at a time is milliseconds), but
      it pulls in ``numba``/``llvmlite`` (about 200 MB) and is therefore not a
      required dependency. Install with ``pip install shap`` to enable it.
 
@@ -99,6 +100,8 @@ from src import preprocessing as pp
 from src.dataset_loader import BIGO_LABELS
 from src.feature_extractor import FILE_FEATURE_NAMES, METRIC_DEFINITIONS
 from src.pattern_features import PATTERN_DEFINITIONS, PATTERN_FEATURE_NAMES
+from src.analysis_features import ANALYSIS_FEATURE_NAMES, FEATURE_DESCRIPTIONS as ANALYSIS_DESCRIPTIONS
+from src.analysis_features import STATIC_FEATURE_NAMES
 
 GLOBAL_PATH = config.MODELS_DIR / "explainability.json"
 REPORT_DIR = config.PROJECT_ROOT / "reports" / "explainability"
@@ -154,6 +157,14 @@ FEATURE_GROUPS: dict[str, tuple[str, ...]] = {
         "function_call_count", "collection_literal_count",
     ),
     "Operators": ("operator_count", "arithmetic_operator_count"),
+    "Static analyzer estimate": (
+        "static_time_known", "static_time_degree", "static_time_log_power", "static_time_exponential",
+    ),
+    "Data handling (extra AST counts)": (
+        "assignment_count", "augmented_assignment_count", "subscript_count", "slice_count",
+        "collection_mutation_call_count", "membership_test_count", "max_call_nesting_depth",
+        "max_parameter_count", "recursion_limit_set",
+    ),
 }
 GROUP_OF = {f: g for g, fs in FEATURE_GROUPS.items() for f in fs}
 
@@ -172,6 +183,10 @@ _LABEL_OVERRIDES = {
     "maximum_nesting_depth": "Deepest nesting",
     "average_nesting_depth": "Average nesting depth",
     "maximum_loop_nesting_depth": "Deepest loop nesting",
+    "static_time_known": "Static estimate available",
+    "static_time_degree": "Static estimate: polynomial degree",
+    "static_time_log_power": "Static estimate: power of log n",
+    "static_time_exponential": "Static estimate: exponential",
     "max_input_loop_depth": "Deepest input-dependent loop nesting",
     "max_recursive_branching": "Most self-calls in one function",
     "loop_count": "Number of loops",
@@ -205,10 +220,21 @@ def _label(name: str) -> str:
 def _description(name: str) -> str:
     if name in PATTERN_DEFINITIONS:
         return PATTERN_DEFINITIONS[name] + " (whole program, static count)"
+    if name in ANALYSIS_DESCRIPTIONS:
+        return ANALYSIS_DESCRIPTIONS[name]
     return METRIC_DEFINITIONS[name]
 
 
-ALL_FEATURES: tuple[str, ...] = tuple(FILE_FEATURE_NAMES) + tuple(PATTERN_FEATURE_NAMES)
+def _kind(name: str) -> str:
+    if name in PATTERN_DEFINITIONS:
+        return "algorithm pattern"
+    if name in STATIC_FEATURE_NAMES:
+        return "static analyzer estimate"
+    return "structural"
+
+
+# Every feature the dataset and the predictor compute; the model uses the subset in its metadata
+ALL_FEATURES: tuple[str, ...] = tuple(FILE_FEATURE_NAMES) + tuple(PATTERN_FEATURE_NAMES) + tuple(ANALYSIS_FEATURE_NAMES)
 
 
 def feature_catalogue(features: Optional[Iterable[str]] = None) -> pd.DataFrame:
@@ -217,7 +243,7 @@ def feature_catalogue(features: Optional[Iterable[str]] = None) -> pd.DataFrame:
     for name in features or ALL_FEATURES:
         rows.append({
             "feature": name, "label": _label(name), "group": GROUP_OF.get(name, "Other"),
-            "kind": "algorithm pattern" if name in PATTERN_DEFINITIONS else "structural",
+            "kind": _kind(name),
             "description": _description(name),
         })
     return pd.DataFrame(rows)
@@ -361,7 +387,8 @@ def compute_global_explanation(df: pd.DataFrame, split: "pp.SplitResult", model=
         perm = permutation_importance(model.pipeline, X_te, y_te, {f: [f] for f in features}, n_repeats, seed)
         log("permutation importance done")
         groups = permutation_importance(model.pipeline, X_te, y_te,
-                                        {g: [f for f in fs if f in features] for g, fs in FEATURE_GROUPS.items()},
+                                        {g: [f for f in fs if f in features] for g, fs in FEATURE_GROUPS.items()
+                                         if any(f in features for f in fs)},
                                         n_repeats, seed)
         log("grouped permutation importance done")
         local_mean = mean_abs_contributions(model, X_te)
@@ -391,6 +418,7 @@ def compute_global_explanation(df: pd.DataFrame, split: "pp.SplitResult", model=
     return {
         "created": time.strftime("%Y-%m-%d %H:%M:%S"),
         "model_sha256": _sha256(config.MODEL_PATH),
+        "model_name": (model.metadata or {}).get("selected_model", "Random Forest"),
         "dataset_sha256": _sha256(config.BIGO_DATASET_CSV),
         "split_file_sha256": _sha256(pp.SPLIT_FILE),
         "versions": _versions(),
@@ -834,7 +862,7 @@ def render_report(g: dict) -> str:
     L = [
         "# Model explainability report (Phase 14)",
         "",
-        f"Model: Random Forest, {len(g['native'])} features. Test rows: {s['n_test_rows']} (grouped by problem, "
+        f"Model: {g.get('model_name', 'Random Forest')}, {len(g['native'])} features. Test rows: {s['n_test_rows']} (grouped by problem, "
         f"unseen in training). Training rows: {s['n_training_rows']}. Permutation repeats: {s['n_repeats']}, seed {s['seed']}.",
         f"Baseline test macro F1 {b['test_macro_f1']:.3f}" + (" (matches the saved model metadata)." if b["matches_metadata"]
                                                                else f" (metadata says {b['metadata_test_macro_f1']}; check the files)."),
@@ -912,13 +940,13 @@ def render_report(g: dict) -> str:
         "",
         "Spearman correlation between the feature rankings:",
         "",
-        "| pair | Spearman (all 57) | shared top-10 features |",
+        f"| pair | Spearman (all {len(g['native'])}) | shared top-10 features |",
         "|---|---|---|",
         f"| native vs permutation | {a['native_vs_permutation_spearman']} | {a['native_vs_permutation_top10_overlap']}/10 |",
         f"| native vs aggregated tree-path | {a['native_vs_tree_path_spearman']} | {a['native_vs_tree_path_top10_overlap']}/10 |",
         f"| permutation vs aggregated tree-path | {a['permutation_vs_tree_path_spearman']} | {a['permutation_vs_tree_path_top10_overlap']}/10 |",
         "",
-        "The Spearman values over all 57 features are dominated by the many features whose permutation importance is "
+        f"The Spearman values over all {len(g['native'])} features are dominated by the many features whose permutation importance is "
         "near zero (their order is noise), so the top-10 overlap is the more useful comparison. Native importance and "
         "tree-path contributions both describe how the trees *use* features (largely on training data); permutation "
         "importance describes what *helps on unseen problems*. When they disagree, the second is the safer guide.",

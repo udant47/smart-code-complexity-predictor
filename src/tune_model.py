@@ -14,7 +14,7 @@ Protocol
   search space and scores each by macro F1 with 5-fold *grouped, stratified*
   cross-validation (grouped by problem). The folds use a different shuffle
   seed from the comparison folds below.
-* The feature set is part of the search: ``patterns`` (57 features) vs
+* The feature set is part of the search: the one ``train_model`` selected (e.g. ``patterns_static``, 61 features) vs
   ``patterns_no_size`` (44 features, without line, identifier and function
   counts). Phase 10 hinted that dropping size features might help, but that
   hint came from the test set, so it is decided here by cross-validation.
@@ -41,7 +41,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
 
 from src import config
@@ -72,27 +72,45 @@ SEARCH_SPACE = {
 }
 
 
-def rf_pipeline(feature_set: str, params: dict, seed: int = config.RANDOM_STATE):
-    est = RandomForestClassifier(random_state=seed, n_jobs=1)
+# Forest models this module can tune. Both are bagged ensembles of decision trees,
+# with the same tree-path explanations; Extra Trees picks split thresholds at random.
+FOREST_MODELS = {"Random Forest": RandomForestClassifier, "Extra Trees": ExtraTreesClassifier}
+
+
+def forest_pipeline(feature_set: str, params: dict, seed: int = config.RANDOM_STATE, model: str = "Random Forest"):
+    if model not in FOREST_MODELS:
+        raise ValueError(f"cannot tune {model!r}; supported: {sorted(FOREST_MODELS)}")
+    est = FOREST_MODELS[model](random_state=seed, n_jobs=1)
     est.set_params(**{k.replace("model__", ""): v for k, v in params.items()})
     return pp.make_pipeline("tree", est, pp.feature_columns(feature_set))
 
 
+def rf_pipeline(feature_set: str, params: dict, seed: int = config.RANDOM_STATE):
+    return forest_pipeline(feature_set, params, seed, "Random Forest")
+
+
+def search_space(model: str) -> dict:
+    space = dict(SEARCH_SPACE)
+    if model == "Extra Trees":  # no bootstrap by default, so no row subsampling
+        space.pop("model__max_samples")
+    return space
+
+
 def phase10_config() -> dict:
-    """The configuration selected in Phase 10 (from the saved metadata when available)."""
+    """The configuration selected by ``train_model`` (from the saved metadata when available)."""
     meta_path = config.MODEL_METADATA_PATH
     if meta_path.exists():
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
-        if meta.get("selected_model") == "Random Forest" and "phase11" not in meta:
+        if meta.get("selected_model") in FOREST_MODELS and "phase11" not in meta:
             params = dict(meta.get("hyperparameters", {}))
             params.setdefault("n_estimators", PHASE10_CONFIG["params"]["n_estimators"])
-            return {"feature_set": meta["feature_set"], "params": params}
-    return json.loads(json.dumps(PHASE10_CONFIG))
+            return {"model": meta["selected_model"], "feature_set": meta["feature_set"], "params": params}
+    return {"model": "Random Forest", **json.loads(json.dumps(PHASE10_CONFIG))}
 
 
 def run(quick: bool = False, df: Optional[pd.DataFrame] = None, split: Optional[pp.SplitResult] = None,
         seed: int = config.RANDOM_STATE, out_path: Path = TUNING_RESULTS, n_jobs: int = -1,
-        verbose: bool = True, feature_sets: tuple = ("patterns", "patterns_no_size")) -> dict:
+        verbose: bool = True, feature_sets: Optional[tuple] = None) -> dict:
     t0 = time.time()
     if df is None:
         df = pd.read_csv(config.BIGO_DATASET_CSV, keep_default_na=False)
@@ -104,14 +122,17 @@ def run(quick: bool = False, df: Optional[pd.DataFrame] = None, split: Optional[
     compare_cv = tm.repeated_cv(y.loc[dev], split.groups.loc[dev], seed)  # same folds as Phase 10
 
     before = phase10_config()
+    model = before["model"]
+    if feature_sets is None:  # the selected feature set and its variant without size features
+        feature_sets = tuple(dict.fromkeys([before["feature_set"], pp.NO_SIZE_VARIANT.get(before["feature_set"], before["feature_set"])]))
     if quick:
         before["params"]["n_estimators"] = 60
-    before_pipe = rf_pipeline(before["feature_set"], before["params"], seed)
+    before_pipe = forest_pipeline(before["feature_set"], before["params"], seed, model)
     before_scores = tm.cv_score(before_pipe, df.loc[dev], y.loc[dev], compare_cv, n_jobs)
     if verbose:
         print(f"Before (Phase 10): RCV macro F1 {before_scores.mean():.3f} ± {before_scores.std():.3f}", flush=True)
 
-    space = dict(SEARCH_SPACE)
+    space = search_space(model)
     if quick:
         space["model__n_estimators"] = [60]
     searches = {}
@@ -119,7 +140,7 @@ def run(quick: bool = False, df: Optional[pd.DataFrame] = None, split: Optional[
         if not set(pp.feature_columns(fs)) <= set(df.columns):
             continue
         search = RandomizedSearchCV(
-            rf_pipeline(fs, {}, seed), space, n_iter=4 if quick else N_ITER, scoring="f1_macro",
+            forest_pipeline(fs, {}, seed, model), space, n_iter=4 if quick else N_ITER, scoring="f1_macro",
             cv=search_cv, random_state=seed, n_jobs=n_jobs, refit=False, error_score="raise",
         )
         search.fit(df.loc[dev], y.loc[dev])
@@ -135,8 +156,8 @@ def run(quick: bool = False, df: Optional[pd.DataFrame] = None, split: Optional[
             print(f"Search [{fs}]: best CV {searches[fs]['search_cv_macro_f1']:.3f}  {searches[fs]['best_params']}", flush=True)
 
     best_fs = max(searches, key=lambda k: searches[k]["search_cv_macro_f1"])
-    tuned = {"feature_set": best_fs, "params": searches[best_fs]["best_params"]}
-    after_scores = tm.cv_score(rf_pipeline(best_fs, tuned["params"], seed), df.loc[dev], y.loc[dev], compare_cv, n_jobs)
+    tuned = {"model": model, "feature_set": best_fs, "params": searches[best_fs]["best_params"]}
+    after_scores = tm.cv_score(forest_pipeline(best_fs, tuned["params"], seed, model), df.loc[dev], y.loc[dev], compare_cv, n_jobs)
     gain = float(after_scores.mean() - before_scores.mean())
     adopted = gain > ADOPT_MARGIN
     chosen = tuned if adopted else before
@@ -145,7 +166,7 @@ def run(quick: bool = False, df: Optional[pd.DataFrame] = None, split: Optional[
               f"({gain:+.3f}) -> {'adopt tuned' if adopted else 'keep Phase 10 configuration'}", flush=True)
 
     result = {
-        "model": "Random Forest",
+        "model": model,
         "protocol": ("RandomizedSearchCV on train+validation with grouped stratified 5-fold CV; before/after compared "
                      "on the Phase 10 repeated grouped CV folds; test set not used"),
         "seed": seed,

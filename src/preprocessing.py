@@ -85,6 +85,7 @@ from src import config
 from src.dataset_loader import BIGO_LABELS
 from src.feature_extractor import FILE_FEATURE_NAMES
 from src.pattern_features import PATTERN_FEATURE_NAMES
+from src.analysis_features import ANALYSIS_FEATURE_NAMES, STATIC_FEATURE_NAMES
 
 TARGET = "label"
 CLASS_ORDER = [k for k, _ in sorted(BIGO_LABELS.items(), key=lambda kv: kv[1][2])]
@@ -120,8 +121,14 @@ FEATURE_SETS: dict[str, tuple[str, ...]] = {
     # structural + algorithm-pattern features (src/pattern_features.py)
     "patterns": tuple(FILE_FEATURE_NAMES) + tuple(PATTERN_FEATURE_NAMES),
     "patterns_no_size": tuple(f for f in FILE_FEATURE_NAMES if f not in SIZE_FEATURES) + tuple(PATTERN_FEATURE_NAMES),
+    # + the rule-based analyzer's own time estimate as 4 numbers (src/analysis_features.py; final improvement phase)
+    "patterns_static": tuple(FILE_FEATURE_NAMES) + tuple(PATTERN_FEATURE_NAMES) + tuple(STATIC_FEATURE_NAMES),
+    "patterns_static_no_size": tuple(f for f in FILE_FEATURE_NAMES if f not in SIZE_FEATURES)
+    + tuple(PATTERN_FEATURE_NAMES) + tuple(STATIC_FEATURE_NAMES),
+    # everything computed, including the 9 extra AST counts (kept for the ablation; not adopted)
+    "extended": tuple(FILE_FEATURE_NAMES) + tuple(PATTERN_FEATURE_NAMES) + tuple(ANALYSIS_FEATURE_NAMES),
 }
-NO_SIZE_VARIANT = {"all": "no_size", "patterns": "patterns_no_size"}
+NO_SIZE_VARIANT = {"all": "no_size", "patterns": "patterns_no_size", "patterns_static": "patterns_static_no_size"}
 
 SPLIT_FILE = config.PROCESSED_DATA_DIR / "bigo_splits.csv"
 PREPROCESSING_CONFIG = config.MODELS_DIR / "preprocessing_config.json"

@@ -68,11 +68,12 @@ def score_components(components: list) -> go.Figure:
     return plotly_layout(fig, height=60 + 30 * len(names))
 
 
-def model_comparison(df: pd.DataFrame, selected: str = None) -> go.Figure:
+def model_comparison(df: pd.DataFrame, selected: str = None, selected_features: str = None) -> go.Figure:
+    """Test macro F1 per candidate; the saved model (name and feature set, from its metadata) is highlighted."""
     d = df.iloc[::-1]
     labels = d["Model"] + "  [" + d["Features"] + "]"
-    colors = [T["accent"] if selected and lab.startswith(selected) and f == "patterns" else T["neutral"]
-              for lab, f in zip(d["Model"], d["Features"])]
+    colors = [T["accent"] if selected and m == selected and (selected_features is None or f == selected_features)
+              else T["neutral"] for m, f in zip(d["Model"], d["Features"])]
     fig = go.Figure(go.Bar(
         x=d["Test macro F1"], y=labels, orientation="h", marker_color=colors, marker_line_width=0,
         error_x=dict(type="data", symmetric=False, array=d["CI high"] - d["Test macro F1"],

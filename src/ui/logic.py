@@ -246,6 +246,7 @@ ARTIFACTS = {
     "confusion_matrix": REPORTS / "models" / "confusion_matrix_selected.csv",
     "dataset_report": config.DATASET_REPORT_JSON,
     "explainability": config.MODELS_DIR / "explainability.json",
+    "improvement": REPORTS / "improvement" / "improvement_results.json",
 }
 COMMANDS = {
     "model_metadata": "python -m src.evaluate_model",
@@ -254,6 +255,7 @@ COMMANDS = {
     "confusion_matrix": "python -m src.train_model",
     "dataset_report": "python -m src.dataset_loader build",
     "explainability": "python -m src.explainability",
+    "improvement": "python -m src.improvement_report",
 }
 
 

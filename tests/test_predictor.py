@@ -22,6 +22,7 @@ from src import config
 from src import predictor as pr
 from src import preprocessing as pp
 from src.pattern_features import PATTERN_FEATURE_NAMES
+from src.dataset_loader import BIGO_FEATURE_COLUMNS
 from tests.test_preprocessing import fixture_table
 
 MERGE_SORT = textwrap.dedent('''
@@ -94,7 +95,7 @@ def paths(d):
 def test_merge_sort_full_result(model_dir):
     r = pr.predict(MERGE_SORT, **paths(model_dir))
     assert r.success and r.errors == []
-    assert set(r.file_metrics) == set(pp.feature_columns("patterns"))
+    assert set(r.file_metrics) == set(BIGO_FEATURE_COLUMNS)  # every computed feature; the model uses a subset
     assert [f.function_id for f in r.functions] == ["merge", "merge_sort"]
     ms = r.functions[1]
     assert ms.static_estimate["time_complexity"] == "O(n log n)"  # rule-based analyser

@@ -23,6 +23,7 @@ from src import explainability as ex
 from src import predictor as pr
 from src import preprocessing as pp
 from src.pattern_features import PATTERN_FEATURE_NAMES
+from src.dataset_loader import BIGO_FEATURE_COLUMNS
 from tests.test_preprocessing import fixture_table
 
 FEATURES = pp.feature_columns("patterns")
@@ -90,12 +91,14 @@ def row_values(df, i=0):
 # --------------------------------------------------------------------------- #
 def test_catalogue_covers_every_model_feature_once():
     cat = ex.feature_catalogue()
-    assert list(cat["feature"]) == FEATURES
+    assert list(cat["feature"]) == list(BIGO_FEATURE_COLUMNS)  # every computed feature, in dataset order
     assert set(cat.columns) == {"feature", "label", "group", "kind", "description"}
     assert cat["label"].str.len().min() > 3 and cat["description"].str.len().min() > 10
     assert (cat["group"] != "Other").all()
     grouped = [f for fs in ex.FEATURE_GROUPS.values() for f in fs]
-    assert sorted(grouped) == sorted(FEATURES)  # groups partition the features
+    assert sorted(grouped) == sorted(BIGO_FEATURE_COLUMNS)  # groups partition the features
+    assert set(FEATURES) <= set(grouped)
+    assert set(cat.loc[cat["feature"].str.startswith("static_time"), "kind"]) == {"static analyzer estimate"}
 
 
 def test_describe_feature():
@@ -122,7 +125,8 @@ def test_global_file_format(setup):
                 "rank_agreement", "correlated", "training_quantiles", "caveats", "versions"):
         assert key in g
     assert len(g["native"]) == len(g["permutation"]) == len(g["tree_path_mean_abs"]) == 57
-    assert {r["group"] for r in g["groups"]} == set(ex.FEATURE_GROUPS)
+    # only groups with at least one model feature are shuffled (this fixture model uses the 57 "patterns" features)
+    assert {r["group"] for r in g["groups"]} == {grp for grp, fs in ex.FEATURE_GROUPS.items() if set(fs) & set(FEATURES)}
     assert set(g["permutation"][0]["per_class"]) == {pr.BIGO_OF[c] for c in setup["model"].classes}
     assert len(g["training_quantiles"]["code_lines"]) == 101
     assert any("not causation" in c for c in g["caveats"])
@@ -335,7 +339,8 @@ def test_predict_with_explanation(setup):
 @pytest.mark.skipif(not config.MODEL_PATH.exists(), reason="real model not trained")
 def test_real_model_explanation():
     e = ex.explain_source(LOOPY)
-    assert e.available and len(e.contributions) == 57 and e.additivity_error < 1e-9
+    n_features = len(json.loads(config.MODEL_METADATA_PATH.read_text(encoding="utf-8"))["features"])
+    assert e.available and len(e.contributions) == n_features and e.additivity_error < 1e-9
     if ex.GLOBAL_PATH.exists():
         assert e.contributions[0].share_of_training_below is not None
 
@@ -345,5 +350,5 @@ def test_real_global_file_is_consistent():
     g = ex.load_global_explanation()
     assert g.available
     assert g.data["baseline"]["matches_metadata"]
-    assert len(g.data["permutation"]) == 57
+    assert len(g.data["permutation"]) == len(json.loads(config.MODEL_METADATA_PATH.read_text(encoding="utf-8"))["features"])
     assert not g.stale

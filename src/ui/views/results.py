@@ -10,6 +10,20 @@ from src.ui import components as ui
 from src.ui.styles import TOKENS
 
 
+MEASURES_HELP = """
+| Measure | What it is | How it is obtained |
+|---|---|---|
+| **Structural complexity** | Low / Medium / High band for how hard the code is to read and test | Rule on cyclomatic complexity (1-5 Low, 6-10 Medium, 11+ High) |
+| **Cyclomatic complexity** | Number of independent paths through the code (McCabe) | Counted exactly from the syntax tree |
+| **Time complexity (static estimate)** | Worst-case growth of running time, e.g. O(n log n) | Rules over loops, recursion and library calls; *Unknown* when no rule applies. An estimate, not a proof |
+| **Auxiliary space (static estimate)** | Extra memory beyond the inputs, including the recursion stack | Same rule-based analyzer; inputs are not counted |
+| **ML-predicted class** | One of 7 time-complexity classes | Random Forest trained on expert labels; agrees with them on about half of unseen problems. A second opinion |
+
+A short function can be O(2^n) and a long one O(1): readability (structural, cyclomatic) and growth (time, space) are
+different questions. No measure here runs the code.
+"""
+
+
 def render(result: dict, key: str = "main") -> None:
     ml_issues, other_errors = logic.split_issues(result.get("errors"))
     for e in other_errors:
@@ -63,6 +77,8 @@ def _overview(result: dict) -> None:
         ui.card("Derived Complexity Score", ui.fmt(o["derived_score"], 1), score_sub, accent=True),
         ui.card("ML time-complexity class", ml_value, ml_sub, accent=True),
     ])
+    with st.expander("What is the difference between these measures?"):
+        st.markdown(MEASURES_HELP)
     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
     ui.cards([
         ui.card("Code lines", o["code_lines"], f"{o['total_lines']} total lines"),
@@ -166,8 +182,17 @@ def _algorithms(result: dict) -> None:
     ui.section("Algorithm analysis (static Big-O)",
                "Separate from structural complexity: a short function can be O(2^n) and a long one O(1). "
                "Estimates come from rules over the code, worst case, and say Unknown when the rules cannot decide.")
+    script = result.get("program_estimate")
+    if script:
+        title = (f"Module-level code (script)  ·  time {script.get('time_complexity', 'Unknown')}  ·  "
+                 f"aux. space {script.get('space_complexity', 'Unknown')}")
+        with st.expander(title, expanded=not fns):
+            ui.muted("Code outside functions, with values read from input() treated as the input size. Functions it "
+                     "calls are included.")
+            _estimate_block(script, nested=True)
     if not fns:
-        ui.callout("info", "Unsupported for this input", "Big-O estimates are made per function; this code has no functions.")
+        if not script:
+            ui.callout("info", "Unsupported for this input", "This code has neither functions nor module-level statements to analyse.")
         return
     counts = {s: sum(1 for f in fns if (f.get("static_estimate") or {}).get("status") == s) for s in ("estimated", "partial", "unknown")}
     ui.muted(f"{counts['estimated']} estimated · {counts['partial']} partial · {counts['unknown']} unknown")
@@ -186,7 +211,8 @@ def _ml(result: dict, ml_issues: list) -> None:
                    logic.ML_ERROR_TITLES.get(ml_issues[0]["code"], "") if ml_issues else "The model is unavailable.")
     else:
         ui.section("ML time-complexity class (whole file)",
-                   "A Random Forest trained on CodeComplex expert labels. A second opinion, not proof.")
+                   f"A {model.get('model') or 'classical ML model'} trained on CodeComplex expert labels "
+                   f"({model.get('n_features') or '—'} static features). A second opinion, not proof.")
         c1, c2 = st.columns([1, 1.2])
         with c1:
             acc = pred.get("measured_accuracy_in_range")
@@ -240,6 +266,11 @@ def _ml(result: dict, ml_issues: list) -> None:
             for c in exp.get("caveats") or []:
                 st.markdown(f"- {ui.esc(c)}")
 
+    render_global_importance()
+
+
+def render_global_importance() -> None:
+    """Global importance of the saved model (also shown on the Model evaluation page)."""
     ui.section("Global feature importance", "Measured on the held-out test set; computed by python -m src.explainability.")
     g = services.global_explanation()
     if not g["available"]:
@@ -296,5 +327,6 @@ def _all_metrics(result: dict) -> None:
     df = pd.DataFrame([{"Feature": cat.loc[k, "label"] if k in cat.index else k, "Value": v,
                         "Group": cat.loc[k, "group"] if k in cat.index else "",
                         "Definition": cat.loc[k, "description"] if k in cat.index else ""} for k, v in fm.items()])
-    ui.section("All file-level features", "The 57 static features the model receives, with their definitions.")
+    ui.section("All file-level features", "Every static feature computed for the file. The model uses the subset listed "
+               "in its metadata (see Model evaluation); the rest are shown for information.")
     st.dataframe(df, hide_index=True, **ui.STRETCH)

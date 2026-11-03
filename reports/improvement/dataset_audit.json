@@ -1,0 +1,124 @@
+{
+  "rows": 4458,
+  "problems": 275,
+  "classes": [
+    "constant",
+    "logn",
+    "linear",
+    "nlogn",
+    "quadratic",
+    "cubic",
+    "np"
+  ],
+  "class_balance": {
+    "counts": {
+      "constant": 683,
+      "logn": 581,
+      "linear": 801,
+      "nlogn": 757,
+      "quadratic": 615,
+      "cubic": 540,
+      "np": 481
+    },
+    "imbalance_ratio_max_over_min": 1.665,
+    "share_by_partition": {
+      "train": {
+        "constant": 0.136,
+        "logn": 0.133,
+        "linear": 0.191,
+        "nlogn": 0.181,
+        "quadratic": 0.129,
+        "cubic": 0.123,
+        "np": 0.106
+      },
+      "validation": {
+        "constant": 0.211,
+        "logn": 0.108,
+        "linear": 0.158,
+        "nlogn": 0.121,
+        "quadratic": 0.189,
+        "cubic": 0.096,
+        "np": 0.118
+      },
+      "test": {
+        "constant": 0.162,
+        "logn": 0.139,
+        "linear": 0.157,
+        "nlogn": 0.176,
+        "quadratic": 0.123,
+        "cubic": 0.138,
+        "np": 0.106
+      }
+    },
+    "rows_by_partition": {
+      "train": 2914,
+      "validation": 730,
+      "test": 814
+    }
+  },
+  "label_consistency": {
+    "distinct_feature_vectors": 4402,
+    "rows_with_identical_vector_but_different_label": 0,
+    "near_duplicate_clusters": 104,
+    "rows_in_near_duplicate_clusters": 223,
+    "near_duplicate_clusters_with_different_labels": 0
+  },
+  "leakage": {
+    "problems_in_more_than_one_partition": 0,
+    "near_duplicate_clusters_in_more_than_one_partition": 0,
+    "split_strategy": "StratifiedGroupKFold, groups = problem merged with near-duplicate clusters"
+  },
+  "diversity": {
+    "programs_per_problem_median": 11.0,
+    "programs_per_problem_max": 135,
+    "problems_with_more_than_one_label": 39,
+    "share_of_rows_with_their_problems_majority_label": 0.9556,
+    "distinct_tags": 30,
+    "top_tags": {
+      "implementation": 1638,
+      "math": 1598,
+      "dp": 1276,
+      "greedy": 1271,
+      "brute force": 902,
+      "bitmasks": 624,
+      "sortings": 603,
+      "binary search": 576,
+      "constructive algorithms": 358,
+      "graphs": 339
+    }
+  },
+  "model": {
+    "model": {
+      "model": "Random Forest",
+      "feature_set": "patterns",
+      "params": {
+        "n_estimators": 300,
+        "max_features": "sqrt",
+        "min_samples_leaf": 3,
+        "class_weight": "balanced_subsample"
+      }
+    },
+    "fit_gap": {
+      "in_sample_macro_f1": 0.9434,
+      "grouped_cv_macro_f1": 0.598
+    },
+    "learning_curve": [
+      {
+        "share_of_training_problems": 0.25,
+        "grouped_cv_macro_f1": 0.4529
+      },
+      {
+        "share_of_training_problems": 0.5,
+        "grouped_cv_macro_f1": 0.4828
+      },
+      {
+        "share_of_training_problems": 0.75,
+        "grouped_cv_macro_f1": 0.5161
+      },
+      {
+        "share_of_training_problems": 1.0,
+        "grouped_cv_macro_f1": 0.5372
+      }
+    ]
+  }
+}

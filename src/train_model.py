@@ -71,6 +71,7 @@ from sklearn.dummy import DummyClassifier
 from sklearn.ensemble import (
     GradientBoostingClassifier,
     HistGradientBoostingClassifier,
+    ExtraTreesClassifier,
     RandomForestClassifier,
     VotingClassifier,
 )
@@ -97,7 +98,7 @@ REPORT_DIR = config.PROJECT_ROOT / "reports" / "models"
 TIE_TOLERANCE = 0.005
 RCV_REPEATS = 2
 N_BOOTSTRAP = 1000
-FEATURE_SETS = ("all", "patterns")
+FEATURE_SETS = ("all", "patterns", "patterns_static")
 CLASS_NAMES = [BIGO_LABELS[c][1] for c in pp.CLASS_ORDER]
 FIRST_ROUND = {"model": "Logistic Regression", "features": "all", "test_macro_f1": 0.404}  # Phase 10, round 1
 
@@ -157,6 +158,11 @@ def candidates(quick: bool = False, seed: int = config.RANDOM_STATE) -> list[Can
                    m + "class_weight": ["balanced"] if q else [None, "balanced"]}, 3),
         Candidate("Random Forest", "tree",
                   RandomForestClassifier(n_estimators=80 if q else 300, random_state=seed, n_jobs=1),
+                  {m + "max_features": ["sqrt"] if q else ["sqrt", 0.5],
+                   m + "min_samples_leaf": [2] if q else [1, 3],
+                   m + "class_weight": ["balanced_subsample"] if q else [None, "balanced_subsample"]}, 4),
+        Candidate("Extra Trees", "tree",
+                  ExtraTreesClassifier(n_estimators=80 if q else 300, random_state=seed, n_jobs=1),
                   {m + "max_features": ["sqrt"] if q else ["sqrt", 0.5],
                    m + "min_samples_leaf": [2] if q else [1, 3],
                    m + "class_weight": ["balanced_subsample"] if q else [None, "balanced_subsample"]}, 4),
