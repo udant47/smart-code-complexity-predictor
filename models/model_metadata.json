@@ -1,0 +1,277 @@
+{
+  "phase11": true,
+  "selected_model": "Random Forest",
+  "feature_set": "patterns_static",
+  "features": [
+    "total_lines",
+    "code_lines",
+    "blank_lines",
+    "comment_lines",
+    "docstring_lines",
+    "comment_ratio",
+    "function_count",
+    "class_count",
+    "average_function_length",
+    "maximum_function_length",
+    "return_count",
+    "if_count",
+    "elif_count",
+    "else_count",
+    "for_loop_count",
+    "while_loop_count",
+    "loop_count",
+    "try_count",
+    "except_count",
+    "conditional_expression_count",
+    "comprehension_count",
+    "cyclomatic_complexity",
+    "average_function_cyclomatic_complexity",
+    "maximum_function_cyclomatic_complexity",
+    "maximum_nesting_depth",
+    "average_nesting_depth",
+    "nested_loop_count",
+    "maximum_loop_nesting_depth",
+    "recursive_call_count",
+    "import_count",
+    "identifier_count",
+    "unique_identifier_count",
+    "operator_count",
+    "arithmetic_operator_count",
+    "comparison_operator_count",
+    "logical_operator_count",
+    "bitwise_operator_count",
+    "function_call_count",
+    "collection_literal_count",
+    "sort_call_count",
+    "heap_call_count",
+    "bisect_call_count",
+    "hash_container_count",
+    "math_call_count",
+    "halving_loop_count",
+    "binary_search_mid_count",
+    "constant_bound_loop_count",
+    "max_input_loop_depth",
+    "dependent_inner_loop_count",
+    "while_true_count",
+    "exponential_range_loop_count",
+    "power_of_two_expr_count",
+    "combinatoric_call_count",
+    "recursive_function_count",
+    "max_recursive_branching",
+    "dividing_recursion_count",
+    "memoized_function_count",
+    "static_time_known",
+    "static_time_degree",
+    "static_time_log_power",
+    "static_time_exponential"
+  ],
+  "hyperparameters": {
+    "class_weight": "balanced_subsample",
+    "max_features": "sqrt",
+    "min_samples_leaf": 3,
+    "n_estimators": 300
+  },
+  "classes": [
+    "constant",
+    "logn",
+    "linear",
+    "nlogn",
+    "quadratic",
+    "cubic",
+    "np"
+  ],
+  "class_bigo": [
+    "O(1)",
+    "O(log n)",
+    "O(n)",
+    "O(n log n)",
+    "O(n^2)",
+    "O(n^3)",
+    "O(2^n)"
+  ],
+  "trained_on": "3644 train + validation rows (grouped by problem)",
+  "test_metrics": {
+    "accuracy": 0.4693,
+    "balanced_accuracy": 0.4597,
+    "macro_precision": 0.5016,
+    "macro_recall": 0.4597,
+    "macro_f1": 0.4604,
+    "weighted_f1": 0.4681,
+    "macro_f1_ci": [
+      0.336,
+      0.5579
+    ]
+  },
+  "per_class_test": {
+    "O(1)": {
+      "precision": 0.52,
+      "recall": 0.402,
+      "f1": 0.453,
+      "support": 132
+    },
+    "O(log n)": {
+      "precision": 0.683,
+      "recall": 0.363,
+      "f1": 0.474,
+      "support": 113
+    },
+    "O(n)": {
+      "precision": 0.356,
+      "recall": 0.57,
+      "f1": 0.438,
+      "support": 128
+    },
+    "O(n log n)": {
+      "precision": 0.588,
+      "recall": 0.657,
+      "f1": 0.62,
+      "support": 143
+    },
+    "O(n^2)": {
+      "precision": 0.351,
+      "recall": 0.53,
+      "f1": 0.422,
+      "support": 100
+    },
+    "O(n^3)": {
+      "precision": 0.574,
+      "recall": 0.312,
+      "f1": 0.405,
+      "support": 112
+    },
+    "O(2^n)": {
+      "precision": 0.44,
+      "recall": 0.384,
+      "f1": 0.41,
+      "support": 86
+    }
+  },
+  "confidence_reliability_test": [
+    {
+      "from": 0.0,
+      "to": 0.4,
+      "n": 291,
+      "accuracy": 0.3162
+    },
+    {
+      "from": 0.4,
+      "to": 0.6,
+      "n": 262,
+      "accuracy": 0.3511
+    },
+    {
+      "from": 0.6,
+      "to": 0.8,
+      "n": 187,
+      "accuracy": 0.7166
+    },
+    {
+      "from": 0.8,
+      "to": 1.0,
+      "n": 74,
+      "accuracy": 0.8649
+    }
+  ],
+  "calibration_test": {
+    "ece_top_label": 0.0739,
+    "brier_multiclass": 0.6607,
+    "log_loss": 1.4498,
+    "mean_top_vote_share": 0.5126,
+    "accuracy": 0.4693,
+    "bins": 10,
+    "note": "Vote shares (averaged tree votes) are confidence scores, not calibrated probabilities."
+  },
+  "generalization": {
+    "problem_grouped_oof": {
+      "n": 4458,
+      "accuracy": 0.5727,
+      "macro_f1": 0.5713,
+      "weighted_f1": 0.5742
+    },
+    "contest_grouped_oof": {
+      "n": 4458,
+      "accuracy": 0.5664,
+      "macro_f1": 0.5661,
+      "weighted_f1": 0.5685
+    },
+    "family_holdout_mean_macro_f1_change": -0.0323,
+    "families": {
+      "binary search": {
+        "held_out": 0.5014,
+        "seen": 0.5359
+      },
+      "bitmasks": {
+        "held_out": 0.1036,
+        "seen": 0.1791
+      },
+      "brute force": {
+        "held_out": 0.4074,
+        "seen": 0.4252
+      },
+      "combinatorics": {
+        "held_out": 0.2149,
+        "seen": 0.2011
+      },
+      "constructive algorithms": {
+        "held_out": 0.357,
+        "seen": 0.3512
+      },
+      "dp": {
+        "held_out": 0.3847,
+        "seen": 0.5037
+      },
+      "graphs": {
+        "held_out": 0.5071,
+        "seen": 0.5159
+      },
+      "greedy": {
+        "held_out": 0.4832,
+        "seen": 0.4771
+      },
+      "implementation": {
+        "held_out": 0.4127,
+        "seen": 0.4482
+      },
+      "math": {
+        "held_out": 0.4564,
+        "seen": 0.4806
+      },
+      "number theory": {
+        "held_out": 0.2891,
+        "seen": 0.3001
+      },
+      "sortings": {
+        "held_out": 0.3774,
+        "seen": 0.4645
+      }
+    },
+    "implementations_mean_problem_accuracy": 0.5213,
+    "external": null
+  },
+  "tuning": {
+    "adopted": "phase10",
+    "rcv_gain": 0.0030902255981264393,
+    "adopt_margin": 0.005
+  },
+  "seed": 42,
+  "files": {
+    "model": "complexity_model.joblib",
+    "preprocessing": "preprocessing_pipeline.joblib"
+  },
+  "versions": {
+    "python": "3.11.18",
+    "scikit-learn": "1.7.2",
+    "pandas": "2.3.3",
+    "numpy": "2.4.6"
+  },
+  "dataset_sha256": "97140036dd88a68d28807886beb33106fdf595ba788e77ad3b656534efc0f81a",
+  "split_file_sha256": "a18fc1c0321c7137d3c33cb58936d7bc2cc0b72ec4acdf835b2ae2cd05b4b0d4",
+  "scope": "Agreement with CodeComplex expert labels on unseen Codeforces problems (whole programs). Not validated on everyday code, on single functions, or for space complexity; weaker on algorithm families absent from training.",
+  "integrity": {
+    "algorithm": "sha256",
+    "files": {
+      "complexity_model.joblib": "569b5f2598d983fee8444b2de9434ba142946413860a50999944c72379aae51c",
+      "preprocessing_pipeline.joblib": "c6fb7813105e46995e06c9f973716237f32350d9db444770f15c377b223f365e"
+    }
+  }
+}

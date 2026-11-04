@@ -10,27 +10,27 @@ plus 18 algorithm-pattern features.
 
 | Model | Features | RCV macro F1 | Test macro F1 [95% CI] | Test acc. | Test bal. acc. | Test macro P | Test macro R | Test weighted F1 |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Soft-voting ensemble (LR + RF + HGB) **(selected)** | patterns_static | 0.555 ± 0.083 | 0.467 [0.341, 0.568] | 0.484 | 0.471 | 0.509 | 0.471 | 0.477 |
-| Extra Trees | patterns_static | 0.550 ± 0.072 | 0.499 [0.352, 0.590] | 0.509 | 0.495 | 0.535 | 0.495 | 0.508 |
-| Random Forest | patterns_static | 0.548 ± 0.074 | 0.459 [0.341, 0.555] | 0.469 | 0.458 | 0.504 | 0.458 | 0.469 |
-| Hist Gradient Boosting | patterns_static | 0.546 ± 0.078 | 0.448 [0.330, 0.556] | 0.473 | 0.458 | 0.503 | 0.458 | 0.460 |
-| Gradient Boosting | patterns_static | 0.541 ± 0.081 | 0.451 [0.329, 0.571] | 0.472 | 0.461 | 0.501 | 0.461 | 0.458 |
+| Soft-voting ensemble (LR + RF + HGB) | patterns_static | 0.560 ± 0.080 | 0.468 [0.342, 0.565] | 0.485 | 0.472 | 0.504 | 0.472 | 0.478 |
+| Random Forest **(selected)** | patterns_static | 0.556 ± 0.080 | 0.460 [0.336, 0.558] | 0.469 | 0.460 | 0.502 | 0.460 | 0.468 |
+| Extra Trees | patterns_static | 0.551 ± 0.073 | 0.494 [0.352, 0.593] | 0.504 | 0.491 | 0.533 | 0.491 | 0.503 |
+| Hist Gradient Boosting | patterns_static | 0.548 ± 0.072 | 0.439 [0.322, 0.547] | 0.462 | 0.450 | 0.481 | 0.450 | 0.449 |
+| Gradient Boosting | patterns_static | 0.541 ± 0.080 | 0.446 [0.330, 0.563] | 0.468 | 0.457 | 0.495 | 0.457 | 0.454 |
 | Soft-voting ensemble (LR + RF + HGB) | patterns | 0.538 ± 0.081 | 0.459 [0.336, 0.560] | 0.473 | 0.461 | 0.499 | 0.461 | 0.467 |
 | Random Forest | patterns | 0.536 ± 0.077 | 0.442 [0.320, 0.544] | 0.453 | 0.442 | 0.480 | 0.442 | 0.452 |
 | Hist Gradient Boosting | patterns | 0.528 ± 0.078 | 0.438 [0.316, 0.548] | 0.453 | 0.442 | 0.480 | 0.442 | 0.445 |
+| SVM (RBF) | patterns_static | 0.527 ± 0.086 | 0.452 [0.325, 0.546] | 0.463 | 0.454 | 0.486 | 0.454 | 0.460 |
 | Extra Trees | patterns | 0.525 ± 0.077 | 0.492 [0.348, 0.576] | 0.494 | 0.484 | 0.529 | 0.484 | 0.499 |
-| Gradient Boosting | patterns | 0.525 ± 0.075 | 0.432 [0.310, 0.542] | 0.446 | 0.436 | 0.470 | 0.436 | 0.438 |
-| SVM (RBF) | patterns_static | 0.521 ± 0.090 | 0.483 [0.347, 0.567] | 0.489 | 0.482 | 0.507 | 0.482 | 0.489 |
+| Gradient Boosting | patterns | 0.524 ± 0.074 | 0.435 [0.314, 0.554] | 0.447 | 0.438 | 0.475 | 0.438 | 0.440 |
 | SVM (RBF) | patterns | 0.520 ± 0.089 | 0.436 [0.321, 0.525] | 0.451 | 0.440 | 0.463 | 0.440 | 0.446 |
-| Logistic Regression | patterns_static | 0.510 ± 0.074 | 0.454 [0.335, 0.537] | 0.468 | 0.456 | 0.469 | 0.456 | 0.463 |
+| Logistic Regression | patterns_static | 0.514 ± 0.073 | 0.455 [0.337, 0.541] | 0.468 | 0.456 | 0.472 | 0.456 | 0.462 |
 | Logistic Regression | patterns | 0.501 ± 0.072 | 0.442 [0.325, 0.523] | 0.453 | 0.441 | 0.456 | 0.441 | 0.450 |
-| Decision Tree | patterns_static | 0.489 ± 0.085 | 0.404 [0.283, 0.508] | 0.428 | 0.412 | 0.477 | 0.412 | 0.414 |
+| Decision Tree | patterns_static | 0.483 ± 0.064 | 0.419 [0.290, 0.514] | 0.435 | 0.423 | 0.453 | 0.423 | 0.431 |
 | Decision Tree | patterns | 0.478 ± 0.066 | 0.438 [0.304, 0.542] | 0.447 | 0.438 | 0.481 | 0.438 | 0.446 |
 | SVM (RBF) | all | 0.443 ± 0.064 | 0.373 [0.273, 0.466] | 0.375 | 0.374 | 0.398 | 0.374 | 0.373 |
 | Soft-voting ensemble (LR + RF + HGB) | all | 0.432 ± 0.057 | 0.380 [0.282, 0.475] | 0.378 | 0.379 | 0.405 | 0.379 | 0.377 |
 | Extra Trees | all | 0.428 ± 0.051 | 0.356 [0.254, 0.440] | 0.349 | 0.352 | 0.390 | 0.352 | 0.354 |
 | Random Forest | all | 0.424 ± 0.053 | 0.361 [0.257, 0.463] | 0.355 | 0.356 | 0.401 | 0.356 | 0.357 |
-| Gradient Boosting | all | 0.421 ± 0.061 | 0.354 [0.252, 0.456] | 0.357 | 0.356 | 0.378 | 0.356 | 0.353 |
+| Gradient Boosting | all | 0.420 ± 0.059 | 0.353 [0.251, 0.455] | 0.356 | 0.354 | 0.379 | 0.354 | 0.353 |
 | Hist Gradient Boosting | all | 0.417 ± 0.049 | 0.364 [0.266, 0.456] | 0.365 | 0.363 | 0.396 | 0.363 | 0.364 |
 | Logistic Regression | all | 0.409 ± 0.048 | 0.404 [0.292, 0.476] | 0.405 | 0.406 | 0.404 | 0.406 | 0.404 |
 | Decision Tree | all | 0.389 ± 0.039 | 0.323 [0.218, 0.409] | 0.332 | 0.329 | 0.355 | 0.329 | 0.315 |
@@ -41,20 +41,20 @@ plus 18 algorithm-pattern features.
 Tuned hyperparameters (grouped 5-fold CV on train):
 
 - Soft-voting ensemble (LR + RF + HGB) [patterns_static]: `{"members": ["Logistic Regression", "Random Forest", "Hist Gradient Boosting"]}`
-- Extra Trees [patterns_static]: `{"class_weight": "balanced_subsample", "max_features": 0.5, "min_samples_leaf": 3}`
 - Random Forest [patterns_static]: `{"class_weight": "balanced_subsample", "max_features": "sqrt", "min_samples_leaf": 3}`
-- Hist Gradient Boosting [patterns_static]: `{"l2_regularization": 0.0, "learning_rate": 0.03, "max_leaf_nodes": 15}`
+- Extra Trees [patterns_static]: `{"class_weight": "balanced_subsample", "max_features": 0.5, "min_samples_leaf": 3}`
+- Hist Gradient Boosting [patterns_static]: `{"l2_regularization": 1.0, "learning_rate": 0.03, "max_leaf_nodes": 15}`
 - Gradient Boosting [patterns_static]: `{"max_depth": 2}`
 - Soft-voting ensemble (LR + RF + HGB) [patterns]: `{"members": ["Logistic Regression", "Random Forest", "Hist Gradient Boosting"]}`
 - Random Forest [patterns]: `{"class_weight": "balanced_subsample", "max_features": "sqrt", "min_samples_leaf": 3}`
 - Hist Gradient Boosting [patterns]: `{"l2_regularization": 1.0, "learning_rate": 0.03, "max_leaf_nodes": 31}`
+- SVM (RBF) [patterns_static]: `{"C": 1.0, "gamma": 0.01}`
 - Extra Trees [patterns]: `{"class_weight": "balanced_subsample", "max_features": 0.5, "min_samples_leaf": 3}`
 - Gradient Boosting [patterns]: `{"max_depth": 2}`
-- SVM (RBF) [patterns_static]: `{"C": 0.3, "gamma": 0.01}`
 - SVM (RBF) [patterns]: `{"C": 1.0, "gamma": 0.01}`
-- Logistic Regression [patterns_static]: `{"C": 0.03, "class_weight": "balanced"}`
+- Logistic Regression [patterns_static]: `{"C": 0.3, "class_weight": "balanced"}`
 - Logistic Regression [patterns]: `{"C": 0.03, "class_weight": "balanced"}`
-- Decision Tree [patterns_static]: `{"class_weight": null, "max_depth": 6, "min_samples_leaf": 10}`
+- Decision Tree [patterns_static]: `{"class_weight": "balanced", "max_depth": 8, "min_samples_leaf": 10}`
 - Decision Tree [patterns]: `{"class_weight": "balanced", "max_depth": 8, "min_samples_leaf": 10}`
 - SVM (RBF) [all]: `{"C": 3.0, "gamma": 0.01}`
 - Soft-voting ensemble (LR + RF + HGB) [all]: `{"members": ["Logistic Regression", "Random Forest", "Hist Gradient Boosting"]}`
@@ -74,15 +74,15 @@ Tuned hyperparameters (grouped 5-fold CV on train):
 | Decision Tree | 0.389 | 0.478 | +0.088 |
 | Random Forest | 0.424 | 0.536 | +0.112 |
 | Extra Trees | 0.428 | 0.525 | +0.097 |
-| Gradient Boosting | 0.421 | 0.525 | +0.103 |
+| Gradient Boosting | 0.420 | 0.524 | +0.103 |
 | Hist Gradient Boosting | 0.417 | 0.528 | +0.111 |
 | Soft-voting ensemble (LR + RF + HGB) | 0.432 | 0.538 | +0.106 |
 
 ## Why this model was selected
 
-**Soft-voting ensemble (LR + RF + HGB)** with the **patterns_static** feature set had the highest repeated-CV macro F1 (0.555 ± 0.083); next was Extra Trees [patterns_static] at 0.550. The rule (highest RCV macro F1; within 0.005, the simpler model) was fixed before any test score was computed.
-On the untouched test problems it reached macro F1 **0.467** (95% CI 0.341–0.568), accuracy 0.484, against 0.039 for the majority baseline and 0.203 for the one-feature rule.
-The first Phase 10 round (Logistic Regression, structural features, selected on a single validation split) scored 0.404 on the same test problems (+0.063).
+**Random Forest** with the **patterns_static** feature set had the highest repeated-CV macro F1 (0.556 ± 0.080); next was Soft-voting ensemble (LR + RF + HGB) [patterns_static] at 0.560. The rule (highest RCV macro F1; within 0.005, the simpler model) was fixed before any test score was computed.
+On the untouched test problems it reached macro F1 **0.460** (95% CI 0.336–0.558), accuracy 0.469, against 0.039 for the majority baseline and 0.203 for the one-feature rule.
+The first Phase 10 round (Logistic Regression, structural features, selected on a single validation split) scored 0.404 on the same test problems (+0.056).
 Top models' confidence intervals overlap, so the exact ranking among them is not decisive.
 
 ![Selected model](confusion_matrix_selected.png)
@@ -91,14 +91,15 @@ Per-class test F1 of the selected model:
 
 | O(1) | O(log n) | O(n) | O(n log n) | O(n^2) | O(n^3) | O(2^n) |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 0.509 | 0.398 | 0.484 | 0.637 | 0.441 | 0.405 | 0.395 |
+| 0.453 | 0.474 | 0.438 | 0.620 | 0.422 | 0.405 | 0.410 |
 
 ![All confusion matrices](confusion_matrices.png)
 
 ## Extra checks
 
-- **Random split:** the selected model scores macro F1 0.750 on a conventional
-  stratified random split vs 0.467 on unseen problems; the gap is leakage through shared problems.
+- **Random split:** the selected model scores macro F1 0.757 on a conventional
+  stratified random split vs 0.460 on unseen problems; the gap is leakage through shared problems.
+- **Without the 13 size features:** test macro F1 0.476 (+0.015); program length is not the main signal.
 - **Caveat on the pattern features:** they were designed after inspecting the first round's errors, which were
   measured on this test set. Selection used only cross-validation, but the test score of the new features may be
   slightly optimistic; the repeated-CV score is the fairer estimate.
@@ -114,4 +115,4 @@ Per-class test F1 of the selected model:
 - Labels contain noise (identical code with different labels was found in Phase 7), so 100% is not attainable.
 - Present the model as a **probabilistic second opinion** next to the rule-based analyser, not as proof.
 
-Software: Python 3.11.9, scikit-learn 1.7.2. XGBoost was not installed, so it was not compared.
+Software: Python 3.11.18, scikit-learn 1.7.2. XGBoost was not installed, so it was not compared.

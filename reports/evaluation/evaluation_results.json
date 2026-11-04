@@ -1,157 +1,117 @@
 {
   "chosen": {
     "model": "Random Forest",
-    "feature_set": "patterns",
+    "feature_set": "patterns_static",
     "params": {
-      "n_estimators": 300,
+      "class_weight": "balanced_subsample",
       "max_features": "sqrt",
       "min_samples_leaf": 3,
-      "class_weight": "balanced_subsample"
+      "n_estimators": 300
     }
   },
   "test_metrics": {
-    "accuracy": 0.4533,
-    "balanced_accuracy": 0.4424,
-    "macro_precision": 0.4797,
-    "macro_recall": 0.4424,
-    "macro_f1": 0.4422,
-    "weighted_f1": 0.4515,
+    "accuracy": 0.4693,
+    "balanced_accuracy": 0.4597,
+    "macro_precision": 0.5016,
+    "macro_recall": 0.4597,
+    "macro_f1": 0.4604,
+    "weighted_f1": 0.4681,
     "macro_f1_ci": [
-      0.3202,
-      0.5435
+      0.336,
+      0.5579
     ]
   },
   "calibration_test": {
-    "ece_top_label": 0.0819,
-    "brier_multiclass": 0.6765,
-    "log_loss": 1.496,
-    "mean_top_vote_share": 0.5049,
-    "accuracy": 0.4533,
+    "ece_top_label": 0.0739,
+    "brier_multiclass": 0.6607,
+    "log_loss": 1.4498,
+    "mean_top_vote_share": 0.5126,
+    "accuracy": 0.4693,
     "bins": 10,
     "note": "Vote shares (averaged tree votes) are confidence scores, not calibrated probabilities."
   },
   "before_test": {
     "n": 814,
-    "accuracy": 0.4533,
-    "macro_f1": 0.4422,
-    "weighted_f1": 0.4515
+    "accuracy": 0.4693,
+    "macro_f1": 0.4604,
+    "weighted_f1": 0.4681
   },
   "tuned_test": {
     "n": 814,
-    "accuracy": 0.4656,
-    "macro_f1": 0.4615,
-    "weighted_f1": 0.468
+    "accuracy": 0.4939,
+    "macro_f1": 0.4884,
+    "weighted_f1": 0.4963
   },
   "generalization": {
     "problem_grouped_oof": {
       "n": 4458,
-      "accuracy": 0.5608,
-      "macro_f1": 0.5592,
-      "weighted_f1": 0.5625
+      "accuracy": 0.5727,
+      "macro_f1": 0.5713,
+      "weighted_f1": 0.5742
     },
     "contest_grouped_oof": {
       "n": 4458,
-      "accuracy": 0.5541,
-      "macro_f1": 0.5548,
-      "weighted_f1": 0.5572
+      "accuracy": 0.5664,
+      "macro_f1": 0.5661,
+      "weighted_f1": 0.5685
     },
-    "family_holdout_mean_macro_f1_change": -0.0318,
+    "family_holdout_mean_macro_f1_change": -0.0323,
     "families": {
       "binary search": {
-        "held_out": 0.4787,
-        "seen": 0.5391
+        "held_out": 0.5014,
+        "seen": 0.5359
       },
       "bitmasks": {
-        "held_out": 0.106,
-        "seen": 0.1723
+        "held_out": 0.1036,
+        "seen": 0.1791
       },
       "brute force": {
-        "held_out": 0.4021,
-        "seen": 0.4171
+        "held_out": 0.4074,
+        "seen": 0.4252
       },
       "combinatorics": {
-        "held_out": 0.1873,
-        "seen": 0.1908
+        "held_out": 0.2149,
+        "seen": 0.2011
       },
       "constructive algorithms": {
-        "held_out": 0.3313,
-        "seen": 0.3428
+        "held_out": 0.357,
+        "seen": 0.3512
       },
       "dp": {
-        "held_out": 0.3827,
-        "seen": 0.4965
+        "held_out": 0.3847,
+        "seen": 0.5037
       },
       "graphs": {
-        "held_out": 0.4894,
-        "seen": 0.4983
+        "held_out": 0.5071,
+        "seen": 0.5159
       },
       "greedy": {
-        "held_out": 0.4712,
-        "seen": 0.46
+        "held_out": 0.4832,
+        "seen": 0.4771
       },
       "implementation": {
-        "held_out": 0.4097,
-        "seen": 0.4328
+        "held_out": 0.4127,
+        "seen": 0.4482
       },
       "math": {
-        "held_out": 0.4227,
-        "seen": 0.4617
+        "held_out": 0.4564,
+        "seen": 0.4806
       },
       "number theory": {
-        "held_out": 0.2863,
-        "seen": 0.3083
+        "held_out": 0.2891,
+        "seen": 0.3001
       },
       "sortings": {
-        "held_out": 0.3501,
-        "seen": 0.3794
+        "held_out": 0.3774,
+        "seen": 0.4645
       }
     },
-    "implementations_mean_problem_accuracy": 0.5001,
-    "external": {
-      "file": "time_complexity_test_set.jsonl",
-      "records": 640,
-      "unmapped_label": 86,
-      "unparsable": 0,
-      "overlapping_problem": 33,
-      "labels_unmapped": {
-        "O(n*m)": 48,
-        "O(n+m)": 23,
-        "O(n+mlogm)": 5,
-        "O(n+m)log(n+m)": 2,
-        "O(n**2+m**2)": 3,
-        "O(nlogn+mlogm)": 5
-      },
-      "unseen_problems": {
-        "n": 521,
-        "accuracy": 0.7716,
-        "macro_f1": 0.4578,
-        "weighted_f1": 0.7754,
-        "class_counts": {
-          "O(n)": 237,
-          "O(n log n)": 115,
-          "O(n^2)": 112,
-          "O(1)": 52,
-          "O(log n)": 5
-        }
-      },
-      "all_mapped": {
-        "n": 554,
-        "accuracy": 0.7762,
-        "macro_f1": 0.4602,
-        "weighted_f1": 0.7818,
-        "class_counts": {
-          "O(n)": 251,
-          "O(n log n)": 127,
-          "O(n^2)": 118,
-          "O(1)": 53,
-          "O(log n)": 5
-        }
-      }
-    }
+    "implementations_mean_problem_accuracy": 0.5213,
+    "external": null
   },
   "failure_distance_%": {
-    "correct": 45.3,
-    "adjacent class": 20.4,
-    "2+ classes away": 34.3
+    "correct": 46.9,
+    "adjacent class": 18.7,
+    "2+ classes away": 34.4
   }
 }

@@ -105,6 +105,16 @@ def phase10_config() -> dict:
             params = dict(meta.get("hyperparameters", {}))
             params.setdefault("n_estimators", PHASE10_CONFIG["params"]["n_estimators"])
             return {"model": meta["selected_model"], "feature_set": meta["feature_set"], "params": params}
+        if "phase11" not in meta:
+            # train_model selected a model this module cannot tune: say so loudly instead of silently
+            # continuing with a different configuration.
+            fallback = {"model": "Random Forest", **json.loads(json.dumps(PHASE10_CONFIG))}
+            fallback["warning"] = (
+                f"train_model selected {meta.get('selected_model')!r} [{meta.get('feature_set')}], which tune_model "
+                f"cannot tune (only {', '.join(FOREST_MODELS)}). Falling back to the documented default "
+                f"{fallback['model']} [{fallback['feature_set']}]. The saved model will NOT be the train_model "
+                "selection; check reports before publishing results.")
+            return fallback
     return {"model": "Random Forest", **json.loads(json.dumps(PHASE10_CONFIG))}
 
 
@@ -122,6 +132,9 @@ def run(quick: bool = False, df: Optional[pd.DataFrame] = None, split: Optional[
     compare_cv = tm.repeated_cv(y.loc[dev], split.groups.loc[dev], seed)  # same folds as Phase 10
 
     before = phase10_config()
+    warning = before.pop("warning", None)
+    if warning:
+        print("WARNING: " + warning, flush=True)
     model = before["model"]
     if feature_sets is None:  # the selected feature set and its variant without size features
         feature_sets = tuple(dict.fromkeys([before["feature_set"], pp.NO_SIZE_VARIANT.get(before["feature_set"], before["feature_set"])]))
@@ -181,6 +194,7 @@ def run(quick: bool = False, df: Optional[pd.DataFrame] = None, split: Optional[
         "adopted": "tuned" if adopted else "phase10",
         "chosen": chosen,
         "note": "The tuned RCV score is slightly optimistic: tuning and comparison used the same development rows.",
+        "warning": warning,
         "seconds": round(time.time() - t0, 1),
     }
     out_path.parent.mkdir(parents=True, exist_ok=True)

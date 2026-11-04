@@ -3,106 +3,106 @@
     {
       "metric": "Accuracy (test)",
       "before": 0.4533,
-      "after": 0.4533,
-      "change": 0.0
+      "after": 0.4693,
+      "change": 0.016
     },
     {
       "metric": "Balanced accuracy (test)",
       "before": 0.4424,
-      "after": 0.4424,
-      "change": 0.0
+      "after": 0.4597,
+      "change": 0.0173
     },
     {
       "metric": "Macro precision (test)",
       "before": 0.4797,
-      "after": 0.4797,
-      "change": 0.0
+      "after": 0.5016,
+      "change": 0.0219
     },
     {
       "metric": "Macro recall (test)",
       "before": 0.4424,
-      "after": 0.4424,
-      "change": 0.0
+      "after": 0.4597,
+      "change": 0.0173
     },
     {
       "metric": "Macro F1 (test)",
       "before": 0.4422,
-      "after": 0.4422,
-      "change": 0.0
+      "after": 0.4604,
+      "change": 0.0182
     },
     {
       "metric": "Weighted F1 (test)",
       "before": 0.4515,
-      "after": 0.4515,
-      "change": 0.0
+      "after": 0.4681,
+      "change": 0.0166
     },
     {
       "metric": "Expected calibration error (lower is better)",
       "before": 0.0819,
-      "after": 0.0819,
-      "change": 0.0
+      "after": 0.0739,
+      "change": -0.008
     },
     {
       "metric": "Multiclass Brier score (lower is better)",
       "before": 0.6765,
-      "after": 0.6765,
-      "change": 0.0
+      "after": 0.6607,
+      "change": -0.0158
     },
     {
       "metric": "Repeated grouped CV macro F1 (train + validation)",
       "before": 0.5358,
-      "after": 0.5358,
-      "change": 0.0
+      "after": 0.556,
+      "change": 0.0202
     }
   ],
   "per_class": [
     {
       "class": "O(1)",
       "F1 before": 0.443,
-      "F1 after": 0.443,
-      "change": 0.0,
+      "F1 after": 0.453,
+      "change": 0.01,
       "support": 132
     },
     {
       "class": "O(log n)",
       "F1 before": 0.433,
-      "F1 after": 0.433,
-      "change": 0.0,
+      "F1 after": 0.474,
+      "change": 0.041,
       "support": 113
     },
     {
       "class": "O(n)",
       "F1 before": 0.439,
-      "F1 after": 0.439,
-      "change": 0.0,
+      "F1 after": 0.438,
+      "change": -0.001,
       "support": 128
     },
     {
       "class": "O(n log n)",
       "F1 before": 0.629,
-      "F1 after": 0.629,
-      "change": 0.0,
+      "F1 after": 0.62,
+      "change": -0.009,
       "support": 143
     },
     {
       "class": "O(n^2)",
       "F1 before": 0.37,
-      "F1 after": 0.37,
-      "change": 0.0,
+      "F1 after": 0.422,
+      "change": 0.052,
       "support": 100
     },
     {
       "class": "O(n^3)",
       "F1 before": 0.377,
-      "F1 after": 0.377,
-      "change": 0.0,
+      "F1 after": 0.405,
+      "change": 0.028,
       "support": 112
     },
     {
       "class": "O(2^n)",
       "F1 before": 0.405,
-      "F1 after": 0.405,
-      "change": 0.0,
+      "F1 after": 0.41,
+      "change": 0.005,
       "support": 86
     }
   ],
@@ -123,10 +123,10 @@
     {
       "feature_set": "patterns + static estimate (61)",
       "n_features": 61,
-      "rcv_macro_f1": 0.5485,
-      "rcv_std": 0.0743,
-      "gain_vs_previous": 0.0127,
-      "within_margin_of_best": false
+      "rcv_macro_f1": 0.556,
+      "rcv_std": 0.0803,
+      "gain_vs_previous": 0.0202,
+      "within_margin_of_best": true
     },
     {
       "feature_set": "patterns + extra AST counts (66)",
@@ -139,9 +139,9 @@
     {
       "feature_set": "patterns + both (70)",
       "n_features": 70,
-      "rcv_macro_f1": 0.5554,
-      "rcv_std": 0.0793,
-      "gain_vs_previous": 0.0196,
+      "rcv_macro_f1": 0.5569,
+      "rcv_std": 0.0832,
+      "gain_vs_previous": 0.0211,
       "within_margin_of_best": true
     }
   ],
@@ -253,13 +253,13 @@
   },
   "final_model": {
     "model": "Random Forest",
-    "feature_set": "patterns",
-    "n_features": 57,
+    "feature_set": "patterns_static",
+    "n_features": 61,
     "hyperparameters": {
-      "n_estimators": 300,
+      "class_weight": "balanced_subsample",
       "max_features": "sqrt",
       "min_samples_leaf": 3,
-      "class_weight": "balanced_subsample"
+      "n_estimators": 300
     }
   },
   "notes": [

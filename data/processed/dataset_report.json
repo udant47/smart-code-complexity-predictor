@@ -1,0 +1,127 @@
+{
+  "environment": {
+    "python": "3.11.18",
+    "pandas": "2.3.3",
+    "platform": "Linux-6.18.44-fc-v230-x86_64-with-glibc2.39",
+    "note": "Parsing uses the running Python's grammar; counts can differ slightly between versions."
+  },
+  "bigo": {
+    "raw_records": 4900,
+    "valid_records": 4900,
+    "removed": {
+      "exact_duplicate": 274,
+      "exact_duplicate_conflicting_labels": 127,
+      "renamed_duplicate": 37,
+      "renamed_duplicate_conflicting_labels": 4
+    },
+    "removed_total": 442,
+    "final_samples": 4458,
+    "problems": 275,
+    "max_samples_per_problem": 135,
+    "near_duplicates": {
+      "threshold_jaccard": 0.9,
+      "shingle_size": 5,
+      "samples_in_clusters": 223,
+      "clusters": 104,
+      "policy": "flagged, not removed; all near-duplicates share a problem, and Phase 8 splits by problem"
+    },
+    "class_distribution": {
+      "constant": {
+        "count": 683,
+        "percent": 15.32
+      },
+      "logn": {
+        "count": 581,
+        "percent": 13.03
+      },
+      "linear": {
+        "count": 801,
+        "percent": 17.97
+      },
+      "nlogn": {
+        "count": 757,
+        "percent": 16.98
+      },
+      "quadratic": {
+        "count": 615,
+        "percent": 13.8
+      },
+      "cubic": {
+        "count": 540,
+        "percent": 12.11
+      },
+      "np": {
+        "count": 481,
+        "percent": 10.79
+      }
+    },
+    "file_sha256": "0cf4923ad68e57a42392b4f4787476fed9392d182c886f4aec73cd70175e1c3b",
+    "file_sha256_matches_pinned": true,
+    "schema": {
+      "records": 4900,
+      "field_presence": {
+        "complexity": 4900,
+        "from": 4900,
+        "problem": 4900,
+        "src": 4900,
+        "tags": 4900
+      },
+      "issues": {}
+    },
+    "output": "bigo_codecomplex_python.csv",
+    "output_sha256": "97140036dd88a68d28807886beb33106fdf595ba788e77ad3b656534efc0f81a"
+  },
+  "structural": {
+    "python_files": 1608,
+    "files_removed": {
+      "file_empty": 229,
+      "file_invalid:syntax": 90
+    },
+    "candidate_functions": 4229,
+    "removed": {
+      "empty_function": 34,
+      "renamed_duplicate_function": 285
+    },
+    "final_samples": 3910,
+    "class_distribution": {
+      "Low": {
+        "count": 3245,
+        "percent": 82.99
+      },
+      "Medium": {
+        "count": 549,
+        "percent": 14.04
+      },
+      "High": {
+        "count": 116,
+        "percent": 2.97
+      }
+    },
+    "label_method": "heuristic: band of McCabe cyclomatic complexity using radon rank thresholds (A 1-5 = Low, B 6-10 = Medium, C+ >= 11 = High); not human-labelled",
+    "label_warning": "reference_label is a deterministic function of the cyclomatic_complexity feature. Training on it would relearn the thresholds; it is not ground truth.",
+    "content_fingerprint": "2f51e3cbed9ca169769d2ef0efbbd78049ad19552c30074285f520b0cc1c11a6",
+    "fingerprint_matches_pinned": true,
+    "output": "structural_functions.csv",
+    "output_sha256": "a9d4f416dd19d78021cd1e39e881469ce0fdac652188402312e1ff805605fbcf"
+  },
+  "sources": {
+    "codecomplex": {
+      "name": "CodeComplex (Python subset)",
+      "repository": "https://github.com/sybaik1/CodeComplex-Data",
+      "commit": "c54631de24c0c3b0e180e876a9f244fb0905cf86",
+      "file": "python_data.jsonl",
+      "sha256": "0cf4923ad68e57a42392b4f4787476fed9392d182c886f4aec73cd70175e1c3b",
+      "paper": "Baik et al., CodeComplex: Dataset for Worst-Case Time Complexity Prediction, arXiv:2401.08719",
+      "paper_url": "https://arxiv.org/abs/2401.08719",
+      "license": "Not stated in the repository; used for non-commercial research and not redistributed."
+    },
+    "thealgorithms_python": {
+      "name": "TheAlgorithms/Python",
+      "repository": "https://github.com/TheAlgorithms/Python",
+      "commit": "6e03a48579ca212a08b36be00378f887dc41a003",
+      "py_file_count": 1608,
+      "content_fingerprint": "2f51e3cbed9ca169769d2ef0efbbd78049ad19552c30074285f520b0cc1c11a6",
+      "license": "MIT (Copyright (c) 2016-2022 TheAlgorithms and contributors)"
+    }
+  }
+}

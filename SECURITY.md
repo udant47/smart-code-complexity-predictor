@@ -100,9 +100,14 @@ Calls on single items (`f(x)` inside `for x in xs`) keep the documented O(1) ass
 
 ## 6. Network exposure
 
-`.streamlit/config.toml` sets `server.address = "localhost"`, so the app is reachable only from this computer. The
-app has no login. To share it on a network or the internet, put it behind authentication and rate limiting: one
-analysis at the size limit uses a CPU core for a few seconds.
+Locally, start the app with `streamlit run app.py --server.address localhost`, so it is reachable only from this
+computer. The config file sets no address because Streamlit Community Cloud sets its own.
+
+The public deployment on Streamlit Community Cloud has no login. That is acceptable here because the app executes
+nothing it receives, stores nothing, has no secrets and calls no external service. The remaining risk is cost: one
+analysis at the size limit (200 KB, 5,000 lines) uses a CPU core for a few seconds, and the free tier has limited CPU,
+so heavy use can slow the app down. The platform also enables its own usage statistics, which the config file
+cannot switch off there.
 
 ## 7. Remaining risks
 

@@ -18,7 +18,7 @@ Largest / smallest class: 1.67 (mild imbalance). Partitions: train 2914, validat
 
 ## 2. Label consistency
 
-- Distinct feature vectors: 4,402; rows whose identical vector carries a different label: **0**.
+- Distinct feature vectors: 4,404; rows whose identical vector carries a different label: **0**.
 - Near-duplicate clusters: 104 (223 rows); clusters with different labels: **0**.
 - No evidence of label noise was found with these checks, so no labels were changed or removed.
 
@@ -37,15 +37,15 @@ Largest / smallest class: 1.67 (mild imbalance). Partitions: train 2914, validat
 
 ## 5. Model-based checks (train + validation only)
 
-Model: Random Forest, `patterns`.
+Model: Random Forest, `patterns_static`.
 
-- In-sample macro F1 0.943 vs grouped 5-fold CV 0.598: a large gap, typical of forests (they nearly memorise training rows). Model selection therefore uses only grouped cross-validation, never training scores.
+- In-sample macro F1 0.947 vs grouped 5-fold CV 0.606: a large gap, typical of forests (they nearly memorise training rows). Model selection therefore uses only grouped cross-validation, never training scores.
 
 | share of training problems | grouped-CV macro F1 |
 |---:|---:|
-| 0.25 | 0.453 |
-| 0.50 | 0.483 |
-| 0.75 | 0.516 |
-| 1.00 | 0.537 |
+| 0.25 | 0.444 |
+| 0.50 | 0.506 |
+| 0.75 | 0.529 |
+| 1.00 | 0.548 |
 
 The score still rises with more training problems, so more labelled problems (not more solutions of the same problems) would most likely help.

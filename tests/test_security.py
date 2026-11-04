@@ -161,7 +161,9 @@ def test_no_upload_widget_and_safe_streamlit_config():
     assert cfg["client"]["showErrorDetails"] is False
     assert cfg["server"]["maxUploadSize"] <= 1
     assert cfg["browser"]["gatherUsageStats"] is False
-    assert cfg["server"]["address"] == "localhost"  # not reachable from other devices by default
+    # No fixed address or port: Streamlit Community Cloud sets them. Local runs bind to localhost instead,
+    # through the documented command (checked in tests/test_deployment.py).
+    assert "address" not in cfg["server"] and "port" not in cfg["server"]
 
 
 # --------------------------------------------------------------------------- #

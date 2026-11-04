@@ -6,6 +6,8 @@ function, estimates time and auxiliary-space Big-O with explicit rules, predicts
 Random Forest trained on expert labels, explains that prediction, and suggests what to review. C is supported
 experimentally, for structural metrics only.
 
+**Live application:** LIVE_APP_URL · see [Deployment](#27-deployment-streamlit-community-cloud)
+
 ![Analyzer](screenshots/02_results_overview.png)
 
 > **Honest summary.** The rule-based analysis is deterministic and documented. The ML model reaches
@@ -43,6 +45,7 @@ experimentally, for structural metrics only.
 24. [Future scope](#24-future-scope)
 25. [Security considerations](#25-security-considerations)
 26. [Publishing to GitHub](#26-publishing-to-github)
+27. [Deployment (Streamlit Community Cloud)](#27-deployment-streamlit-community-cloud)
 
 ---
 
@@ -92,7 +95,7 @@ Motivation:
 | Model evaluation page | Saved results: model comparison, confusion matrix and per-class scores, feature importance, confidence and calibration, generalization, improvement history (before/after), dataset |
 | Languages | Python: full analysis. **C: experimental, structural metrics only.** C++, Java and JavaScript: not supported |
 | Repository analysis | `python -m src.repository FOLDER`: read-only summary of a local folder, with size, time, symlink and secret protections |
-| Security | No code execution (proven by tests), model integrity hashes, input limits, HTML escaping, localhost binding |
+| Security | No code execution (proven by tests), model integrity hashes, input limits, HTML escaping, localhost binding for local runs |
 
 ## 4. Architecture
 
@@ -134,7 +137,7 @@ model's columns in training order → vote shares → explanation, recommendatio
 | Analysis | `ast`, `tokenize` (standard library); `tree-sitter` 0.25.2 + `tree-sitter-c` 0.24.1 for C |
 | ML | scikit-learn (model trained with 1.7.2), pandas, NumPy, joblib |
 | UI | Streamlit (tested with 1.39 and 1.66), Plotly; Matplotlib for report figures |
-| Testing | pytest (994 tests), Streamlit `AppTest` for headless UI tests, Playwright for the screenshots |
+| Testing | pytest (1,003 tests), Streamlit `AppTest` for headless UI tests, Playwright for the screenshots |
 | Optional | SHAP (only for a cross-check of explanations; not required) |
 
 No deep learning frameworks and no LLM APIs are used.
@@ -402,7 +405,7 @@ cd smart-code-complexity-predictor
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # app + pytest + notebooks; the app alone needs only requirements.txt
 ```
 
 ```bash
@@ -412,12 +415,16 @@ cd smart-code-complexity-predictor
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
-**Build the datasets and train the model.** These are not in the repository: CodeComplex is not redistributed,
-and model pickles should not be downloaded from anyone. The commands download from pinned commits, verify
-checksums, train, evaluate, and record the model's SHA-256 hashes.
+**The trained model is included** (`models/`, about 31 MB), so the app works right after installation. It is this
+project's own training output, and its SHA-256 hashes in `models/model_metadata.json` are checked before it is
+loaded. The datasets are not included: CodeComplex is not redistributed.
+
+**To rebuild the datasets and retrain** (optional; about 20-30 minutes). The commands download from pinned
+commits, verify checksums, train, evaluate, and record the model's SHA-256 hashes. Retraining overwrites
+`models/` and `reports/`; commit both together so the dashboard always describes the deployed model.
 
 ```bash
 python -m src.dataset_loader all     # download and build both datasets
@@ -438,10 +445,11 @@ to train.
 ## 19. Running the application
 
 ```bash
-streamlit run app.py
+streamlit run app.py --server.address localhost
 ```
 
-Then open **http://localhost:8501**. The app listens on this computer only. Press Ctrl+C in the terminal to stop it.
+Then open **http://localhost:8501**. With `--server.address localhost` the app is reachable from this computer
+only. (The config file sets no address, because Streamlit Community Cloud sets its own.) Press Ctrl+C to stop it.
 
 Command-line extras:
 
@@ -473,13 +481,14 @@ smart-code-complexity-predictor/
 ├── requirements.txt            pinned dependency ranges
 ├── pyproject.toml              pytest configuration
 ├── README.md · SECURITY.md · TESTING.md
-├── .streamlit/config.toml      dark theme, no error details, localhost only
+├── requirements-dev.txt        + pytest and notebook tools for development
+├── .streamlit/config.toml      dark theme, no error details, 1 MB message limit (cloud-compatible)
 ├── docs/AUDIT.md               final audit: findings, changes, before/after, limitations
 ├── docs/EXTENSIBILITY.md       languages, C parser choice, repository analysis design
 ├── notebooks/01_exploratory_data_analysis.ipynb
 ├── screenshots/                README screenshots
-├── data/raw/ · data/processed/ downloaded and built locally (git-ignored)
-├── models/                     trained model, metadata, explanations (git-ignored, rebuilt)
+├── data/raw/ · data/processed/ downloaded and built locally (git-ignored; only dataset_report.json is committed)
+├── models/                     trained model, metadata, explanations (committed for deployment; hash-verified)
 ├── reports/                    eda/ · preprocessing/ · models/ · evaluation/ · explainability/ · improvement/
 ├── src/
 │   ├── config.py               paths and limits
@@ -502,7 +511,7 @@ smart-code-complexity-predictor/
 │   ├── languages/              common schema, registry, Python adapter, C analyzer (tree-sitter)
 │   ├── repository/             safe folder scan, secret detection, summary, CLI
 │   └── ui/                     components, styles, charts, services, views/
-└── tests/                      25 test files, 994 tests (+ conftest.py)
+└── tests/                      26 test files, 1,003 tests (+ conftest.py)
 ```
 
 ## 22. Testing
@@ -511,12 +520,12 @@ smart-code-complexity-predictor/
 python -m pytest
 ```
 
-* 994 tests cover the parser, features, Big-O rules, ML pipeline, model loading and integrity, explainability,
+* 1,003 tests cover the parser, features, Big-O rules, ML pipeline, model loading and integrity, explainability,
   recommendations, examples, comparison, the Streamlit pages (headless), languages, repository analysis,
   security, robustness, script analysis, sorting algorithms, calibration and training/inference feature equality.
   Line coverage is 91% of `src/` and `app.py`, measured with `pytest-cov` (not a
   project requirement).
-* Expected result on Windows: **990 passed, 4 skipped**. The skips are the SHAP cross-check when SHAP is not
+* Expected result on Windows: **999 passed, 4 skipped** (with the datasets built; in a fresh clone without them, a few dataset tests are skipped). The skips are the SHAP cross-check when SHAP is not
   installed, two symlink tests (Windows only allows symlinks with Developer Mode on), and one POSIX-only
   named-pipe test.
 * [TESTING.md](TESTING.md) maps tests to requirements and gives a 17-step manual test checklist.
@@ -535,6 +544,11 @@ python -m pytest
 * **Static Big-O** covers common patterns only. Everything else is reported as Unknown, and estimates are worst
   case. Quick sort (data-dependent partitions), `while True` loops such as a hand-written heap sift-down, and
   amortised costs stay Unknown. The analyzer never claims exact Big-O for arbitrary programs.
+* **Platform difference (open issue):** retraining on Windows gave slightly different values for the 4 static-estimate
+  features than on Linux. The 57 other features were identical, and the cause is not yet identified. As a result,
+  that Windows run selected a different model (the soft-voting ensemble). The committed model and all reports come
+  from one Linux run, the platform the deployed app runs on, so training and live inference compute features the
+  same way.
 * **Structural metrics** describe control flow and size, not naming, cohesion, coupling, tests or documentation.
 * **C** is experimental and structural only. The preprocessor is not run, and code that relies on
   syntax-changing macros is refused. **C++, Java and JavaScript are not supported.**
@@ -558,8 +572,8 @@ python -m pytest
   must be a regular file, and it must be under 512 MB. A planted malicious pickle is refused, as tested. This is
   integrity checking, not authentication.
 * Input limits (200 KB, 5,000 lines), parser failures reported as messages, and HTML-escaped output.
-* The app has no upload widget and no tracebacks in the page, and it listens on `localhost` only. Streamlit usage
-  statistics are off.
+* The app has no upload widget and no tracebacks in the page. Locally it is started on `localhost` only. The public
+  deployment has no login and stores nothing: each analysis runs in memory for that visitor's session.
 * **Repository analysis** is read-only, never follows symlinks, refuses paths outside the folder, enforces size and
   time limits, never opens credential files, skips files that look like they contain secrets, and never puts source
   text or secret values into reports.
@@ -597,11 +611,60 @@ git remote add origin YOUR_REPOSITORY_URL   # only if no remote exists
 git push -u origin main
 ```
 
-Before pushing, confirm that nothing private or generated is tracked:
+Before pushing, confirm that nothing private is tracked:
 
 ```bash
-git ls-files .venv models data/raw data/processed reports/repository   # should print nothing
+git ls-files .venv data/raw reports/repository   # should print nothing
+git ls-files models data/processed                # only the runtime model files and dataset_report.json
 ```
+
+## 27. Deployment (Streamlit Community Cloud)
+
+### Live application
+
+**URL:** LIVE_APP_URL
+
+Hosted free on [Streamlit Community Cloud](https://streamlit.io/cloud). An app with no visitors for 12 hours goes
+to sleep; the first visitor after that sees a "wake up" button, and the app starts again in about a minute.
+
+### What the deployment uses
+
+| File | Purpose |
+|---|---|
+| `app.py` | entry point (Main file path) |
+| `requirements.txt` | runtime dependencies only; `scikit-learn==1.7.2` is pinned because the model was trained with it |
+| `.streamlit/config.toml` | dark theme and safe defaults; no address or port, which the platform sets |
+| `models/` | the trained model, metadata and explanations, verified by SHA-256 before loading |
+| `reports/`, `data/processed/dataset_report.json` | the saved results the Model evaluation page displays |
+
+No secrets are needed: the app calls no external service and needs no API keys. Memory use is about 400 MB,
+within the free tier.
+
+### Deploy it (first time)
+
+1. Push this repository to GitHub (branch `main`).
+2. Open [share.streamlit.io](https://share.streamlit.io/) and sign in with GitHub. Authorise Streamlit when asked.
+3. Click **Create app** → **Yup, I have an app**.
+4. Repository: `udant47/smart-code-complexity-predictor` · Branch: `main` · Main file path: `app.py`.
+5. App URL: choose a subdomain, for example `smartcode-analyzer` → `https://smartcode-analyzer.streamlit.app`.
+6. **Advanced settings** → Python version **3.11** (the version the project is tested with). Leave Secrets empty.
+   Click **Save**.
+7. Click **Deploy** and wait for the build (a few minutes the first time).
+
+### Update the deployed app
+
+Every push to `main` updates the app automatically:
+
+```bash
+git add -A
+git commit -m "Describe the change"
+git push
+```
+
+If you change `requirements.txt`, the platform reinstalls the dependencies (a few minutes). If you retrain the
+model, commit `models/` and `reports/` together, so the live dashboard always describes the deployed model. To
+restart or delete the app: [share.streamlit.io](https://share.streamlit.io/) → the app's ⋮ menu → **Reboot** or
+**Delete**. Logs: open the app while signed in → **Manage app**.
 
 ---
 

@@ -62,11 +62,20 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+# Dataset statistics only (counts, hashes, versions; no source code), shown on the Dataset tab
+!data/processed/dataset_report.json
 
-# Trained models: pickles are rebuilt with the training commands (about 31 MB).
-# Never commit or download model pickles from untrusted sources.
+# Trained models: rebuilt with the training commands. Never download model pickles from untrusted sources.
 models/*
 !models/.gitkeep
+# Exception for deployment (Streamlit Community Cloud cannot train): the files the app loads at runtime.
+# They are our own training output, verified by SHA-256 (model_metadata.json) before unpickling.
+!models/complexity_model.joblib
+!models/preprocessing_pipeline.joblib
+!models/model_metadata.json
+!models/explainability.json
+!models/preprocessing_config.json
+!models/tuning_results.json
 
 # Local output of `python -m src.repository` (contains absolute local paths)
 reports/repository/

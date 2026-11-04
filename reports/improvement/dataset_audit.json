@@ -57,7 +57,7 @@
     }
   },
   "label_consistency": {
-    "distinct_feature_vectors": 4402,
+    "distinct_feature_vectors": 4404,
     "rows_with_identical_vector_but_different_label": 0,
     "near_duplicate_clusters": 104,
     "rows_in_near_duplicate_clusters": 223,
@@ -90,34 +90,34 @@
   "model": {
     "model": {
       "model": "Random Forest",
-      "feature_set": "patterns",
+      "feature_set": "patterns_static",
       "params": {
-        "n_estimators": 300,
+        "class_weight": "balanced_subsample",
         "max_features": "sqrt",
         "min_samples_leaf": 3,
-        "class_weight": "balanced_subsample"
+        "n_estimators": 300
       }
     },
     "fit_gap": {
-      "in_sample_macro_f1": 0.9434,
-      "grouped_cv_macro_f1": 0.598
+      "in_sample_macro_f1": 0.9471,
+      "grouped_cv_macro_f1": 0.6058
     },
     "learning_curve": [
       {
         "share_of_training_problems": 0.25,
-        "grouped_cv_macro_f1": 0.4529
+        "grouped_cv_macro_f1": 0.4437
       },
       {
         "share_of_training_problems": 0.5,
-        "grouped_cv_macro_f1": 0.4828
+        "grouped_cv_macro_f1": 0.506
       },
       {
         "share_of_training_problems": 0.75,
-        "grouped_cv_macro_f1": 0.5161
+        "grouped_cv_macro_f1": 0.5291
       },
       {
         "share_of_training_problems": 1.0,
-        "grouped_cv_macro_f1": 0.5372
+        "grouped_cv_macro_f1": 0.5479
       }
     ]
   }

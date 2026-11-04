@@ -1,0 +1,191 @@
+{
+  "model": "Random Forest",
+  "protocol": "RandomizedSearchCV on train+validation with grouped stratified 5-fold CV; before/after compared on the Phase 10 repeated grouped CV folds; test set not used",
+  "seed": 42,
+  "quick_mode": false,
+  "search_space": {
+    "n_estimators": [
+      200,
+      400,
+      600
+    ],
+    "max_features": [
+      "sqrt",
+      "log2",
+      0.2,
+      0.35,
+      0.5
+    ],
+    "min_samples_leaf": [
+      1,
+      2,
+      3,
+      5,
+      8
+    ],
+    "min_samples_split": [
+      2,
+      5,
+      10
+    ],
+    "max_depth": [
+      null,
+      12,
+      20
+    ],
+    "class_weight": [
+      null,
+      "balanced",
+      "balanced_subsample"
+    ],
+    "max_samples": [
+      null,
+      0.6,
+      0.8
+    ],
+    "criterion": [
+      "gini",
+      "entropy"
+    ]
+  },
+  "n_iter_per_feature_set": 30,
+  "before": {
+    "model": "Random Forest",
+    "feature_set": "patterns_static",
+    "params": {
+      "class_weight": "balanced_subsample",
+      "max_features": "sqrt",
+      "min_samples_leaf": 3,
+      "n_estimators": 300
+    },
+    "rcv_macro_f1": 0.5559546535744524,
+    "rcv_std": 0.0802881803973119
+  },
+  "searches": {
+    "patterns_static": {
+      "best_params": {
+        "n_estimators": 200,
+        "min_samples_split": 5,
+        "min_samples_leaf": 8,
+        "max_samples": 0.6,
+        "max_features": 0.35,
+        "max_depth": 20,
+        "criterion": "entropy",
+        "class_weight": "balanced_subsample"
+      },
+      "search_cv_macro_f1": 0.5438910115664262,
+      "search_cv_std": 0.0829008252558036,
+      "n_configurations": 30,
+      "all_scores": [
+        0.5438910115664262,
+        0.5430931558019083,
+        0.5429316126762498,
+        0.5423588067994045,
+        0.5421306098695217,
+        0.5419585950865045,
+        0.5417029532808565,
+        0.5412298513595493,
+        0.5407984022124405,
+        0.5404068848141256,
+        0.5403577946553216,
+        0.5401090840233413,
+        0.5378076568206986,
+        0.5369725845496089,
+        0.5363609424744226,
+        0.5358266092335053,
+        0.53549995697343,
+        0.5352624638060763,
+        0.5350453548379323,
+        0.5343508292373871,
+        0.5333775671894716,
+        0.5332205848181911,
+        0.5330538294642284,
+        0.5325906862116568,
+        0.5294163786508715,
+        0.5290968573288257,
+        0.5279583813596943,
+        0.5275012332407845,
+        0.525114299641466,
+        0.5227010856251587
+      ]
+    },
+    "patterns_static_no_size": {
+      "best_params": {
+        "n_estimators": 600,
+        "min_samples_split": 10,
+        "min_samples_leaf": 3,
+        "max_samples": null,
+        "max_features": "log2",
+        "max_depth": 20,
+        "criterion": "entropy",
+        "class_weight": "balanced_subsample"
+      },
+      "search_cv_macro_f1": 0.5508913090917567,
+      "search_cv_std": 0.08504446893531951,
+      "n_configurations": 30,
+      "all_scores": [
+        0.5508913090917567,
+        0.5494463869746101,
+        0.549147140077453,
+        0.5484675228663012,
+        0.5482188423066379,
+        0.5478633152542186,
+        0.5464821307175164,
+        0.544928289157293,
+        0.5448316808256708,
+        0.5447210023095785,
+        0.5446615308335193,
+        0.5446139204431819,
+        0.5438570093173052,
+        0.5429648329271732,
+        0.5426790955614704,
+        0.5423671474782814,
+        0.5418563907283369,
+        0.5416061328744279,
+        0.5412268269089352,
+        0.5411602442346157,
+        0.5410801334779445,
+        0.5397039262462414,
+        0.5389959582091377,
+        0.5387298042986014,
+        0.5381089493295728,
+        0.5365378192621586,
+        0.5361893755081513,
+        0.5356759062725602,
+        0.534342505578185,
+        0.5337639536853995
+      ]
+    }
+  },
+  "tuned": {
+    "model": "Random Forest",
+    "feature_set": "patterns_static_no_size",
+    "params": {
+      "n_estimators": 600,
+      "min_samples_split": 10,
+      "min_samples_leaf": 3,
+      "max_samples": null,
+      "max_features": "log2",
+      "max_depth": 20,
+      "criterion": "entropy",
+      "class_weight": "balanced_subsample"
+    },
+    "rcv_macro_f1": 0.5590448791725788,
+    "rcv_std": 0.07283952368558444
+  },
+  "rcv_gain": 0.0030902255981264393,
+  "adopt_margin": 0.005,
+  "adopted": "phase10",
+  "chosen": {
+    "model": "Random Forest",
+    "feature_set": "patterns_static",
+    "params": {
+      "class_weight": "balanced_subsample",
+      "max_features": "sqrt",
+      "min_samples_leaf": 3,
+      "n_estimators": 300
+    }
+  },
+  "note": "The tuned RCV score is slightly optimistic: tuning and comparison used the same development rows.",
+  "seconds": 397.2
+}
